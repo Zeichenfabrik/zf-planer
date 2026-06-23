@@ -89,6 +89,27 @@
   .bar .v{font-family:var(--serif); font-size:19px; font-weight:600; font-variant-numeric:tabular-nums;}
   .pos{color:var(--pos);} .neg{color:var(--neg);} .warnc{color:var(--warn);}
 
+  /* Schlanke Liste (Block 4) */
+  .table-container{overflow-x:auto;}
+  table.slim{width:100%; border-collapse:collapse; font-size:13px;}
+  table.slim th, table.slim td{padding:8px 10px; text-align:left; border-bottom:1px solid var(--line);}
+  table.slim th{background:var(--card); font-weight:600; cursor:pointer; user-select:none;}
+  table.slim th:hover{background:var(--card2);}
+  table.slim th.sorted-asc:after{content:' ↑'; color:var(--muted);}
+  table.slim th.sorted-desc:after{content:' ↓'; color:var(--muted);}
+  table.slim tr:hover{background:var(--card2);}
+  table.slim .status{text-align:center;}
+  table.slim .status .dot{display:inline-block; width:12px; height:12px; border-radius:50%; background:var(--pos);}
+  table.slim .status .dot.empty{background:var(--line);}
+  table.slim .actions{white-space:nowrap;}
+  table.slim .actions button{padding:2px 6px; font-size:11px; margin:0 2px;}
+  
+  /* Detail-Formular (aufklappbar) */
+  .detail-form{background:var(--card2); border:1px solid var(--line); border-radius:var(--r); padding:15px; margin-top:10px; display:none;}
+  .detail-form.active{display:block;}
+  .detail-form .frow{margin-bottom:8px;}
+  .detail-form .derived{margin-top:12px; padding-top:8px; border-top:1px solid var(--line);}
+
   @media print{ .toolbar,.bar,button{display:none;} body{padding-bottom:0;} }
 </style>
 </head>
@@ -133,16 +154,55 @@
 <div class="card">
   <h2>Wochenkurse</h2>
   <div class="sub">wöchentlich · setzen an Feiertagen &amp; Ferien aus (verschieben sich nach hinten)</div>
-  <div id="kursList"></div>
+  <div class="table-container">
+    <table class="slim" id="kursTable">
+      <thead>
+        <tr>
+          <th data-sort="titel">Titel</th>
+          <th data-sort="dozent">Dozent</th>
+          <th data-sort="tag">Tag</th>
+          <th data-sort="zeit">Uhrzeit</th>
+          <th data-sort="start">Start</th>
+          <th data-sort="sessions">Termine</th>
+          <th data-sort="std">Std/Termin</th>
+          <th data-sort="raum">Raum</th>
+          <th data-sort="total">Stunden ges.</th>
+          <th data-sort="ende">Ende</th>
+          <th class="status">Status</th>
+          <th class="actions">Aktionen</th>
+        </tr>
+      </thead>
+      <tbody id="kursList"></tbody>
+    </table>
+  </div>
   <button class="add" id="addKurs">+ Kurs hinzufügen</button>
+  <div class="detail-form" id="kursDetailForm"></div>
 </div>
 
 <!-- WORKSHOPS -->
 <div class="card">
   <h2>Workshops</h2>
   <div class="sub">feste Blocktermine · von Sperrzeiten ausgenommen</div>
-  <div id="wsList"></div>
+  <div class="table-container">
+    <table class="slim" id="wsTable">
+      <thead>
+        <tr>
+          <th data-sort="titel">Titel</th>
+          <th data-sort="dozent">Dozent</th>
+          <th data-sort="start">Start</th>
+          <th data-sort="tage">Tage</th>
+          <th data-sort="zeiten">Uhrzeiten</th>
+          <th data-sort="raum">Raum</th>
+          <th data-sort="total">Stunden ges.</th>
+          <th class="status">Status</th>
+          <th class="actions">Aktionen</th>
+        </tr>
+      </thead>
+      <tbody id="wsList"></tbody>
+    </table>
+  </div>
   <button class="add" id="addWs">+ Workshop hinzufügen</button>
+  <div class="detail-form" id="wsDetailForm"></div>
 </div>
 
 <!-- SOLL-IST & KONFLIKTE -->
@@ -282,6 +342,9 @@
     };
   }
   var state=freshState();
+  var currentEditKurs = null;
+  var currentEditWs = null;
+  var sortState = { kurs: { col: null, asc: true }, ws: { col: null, asc: true } };
 
   // ---- Rendering --------------------------------------------------------
   function esc(s){ return (s||'').replace(/"/g,'&quot;'); }
@@ -300,38 +363,82 @@
   }
 
   function renderKurse(){
+    // Sortieren
+    var sorted = [...state.kurse];
+    if (sortState.kurs.col) {
+      sorted.sort(function(a, b) {
+        var valA = a[sortState.kurs.col] !== undefined ? a[sortState.kurs.col] : '';
+        var valB = b[sortState.kurs.col] !== undefined ? b[sortState.kurs.col] : '';
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return sortState.kurs.asc ? valA - valB : valB - valA;
+        }
+        valA = String(valA || '').toLowerCase();
+        valB = String(valB || '').toLowerCase();
+        if (valA < valB) return sortState.kurs.asc ? -1 : 1;
+        if (valA > valB) return sortState.kurs.asc ? 1 : -1;
+        return 0;
+      });
+    }
+    
+    // Tabellenzeilen generieren
     var h='';
-    state.kurse.forEach(function(k){
-      var opts=''; for(var w=1;w<=6;w++){ opts+='<option value="'+w+'"'+(k.tag==w?' selected':'')+'>'+WD[w]+'</option>'; }
-      h+='<div class="item">'+
-        '<div class="frow">'+
-          '<label class="fld" style="flex:2; min-width:150px;">Titel<input type="text" data-t="kurse" data-id="'+k.id+'" data-f="titel" value="'+esc(k.titel)+'"></label>'+
-          '<label class="fld" style="flex:1; min-width:120px;">Dozent:in<input type="text" data-t="kurse" data-id="'+k.id+'" data-f="dozent" value="'+esc(k.dozent)+'"></label>'+
-        '</div>'+
-        '<div class="frow" style="margin-top:8px;">'+
-          '<label class="fld">Tag<select data-t="kurse" data-id="'+k.id+'" data-f="tag">'+opts+'</select></label>'+
-          '<label class="fld">Uhrzeit<input type="time" data-t="kurse" data-id="'+k.id+'" data-f="zeit" value="'+(k.zeit||'')+'" style="width:96px;"></label>'+
-          '<label class="fld">Start<input type="date" data-t="kurse" data-id="'+k.id+'" data-f="start" value="'+k.start+'"></label>'+
-          '<label class="fld">Termine<input type="number" data-t="kurse" data-id="'+k.id+'" data-f="sessions" value="'+k.sessions+'" min="1" max="30" style="width:74px;"></label>'+
-          '<label class="fld">Std/Termin<input type="number" data-t="kurse" data-id="'+k.id+'" data-f="std" value="'+k.std+'" min="0.5" max="8" step="0.5" style="width:84px;"></label>'+
-          '<label class="fld">Raum<input type="text" data-t="kurse" data-id="'+k.id+'" data-f="raum" value="'+esc(k.raum)+'" style="width:70px;"></label>'+
-        '</div>'+
-        '<div class="derived">'+
-          '<label class="chk"><input type="checkbox" data-t="kurse" data-id="'+k.id+'" data-f="inFerien"'+(k.inFerien?' checked':'')+'> läuft auch in Ferien</label>'+
-          '<label class="chk"><input type="checkbox" data-t="kurse" data-id="'+k.id+'" data-f="eingetragen"'+(k.eingetragen?' checked':'')+'> Eingetragen</label>'+
-          '<span id="d-'+k.id+'"></span>'+
-          (k.eingetragen ? '<span style="color:var(--pos); font-weight:bold; margin-left:10px;">✓</span>' : '') +
+    sorted.forEach(function(k){
+      var dates = genDates(k.start, +k.tag, +k.sessions, !!k.inFerien);
+      var totalHours = (+k.sessions) * (+k.std);
+      var endDate = dates.length > 0 ? fmt(dates[dates.length-1]) : '—';
+      var tagName = WD[+k.tag] || k.tag;
+      
+      h+='<tr data-id="'+k.id+'">'+
+        '<td data-col="titel">'+esc(k.titel)+'</td>'+
+        '<td data-col="dozent">'+esc(k.dozent)+'</td>'+
+        '<td data-col="tag">'+tagName+'</td>'+
+        '<td data-col="zeit">'+(k.zeit||'')+'</td>'+
+        '<td data-col="start">'+fmt(parseD(k.start))+'</td>'+
+        '<td data-col="sessions">'+k.sessions+'</td>'+
+        '<td data-col="std">'+k.std+'</td>'+
+        '<td data-col="raum">'+esc(k.raum)+'</td>'+
+        '<td data-col="total">'+nf.format(totalHours)+'</td>'+
+        '<td data-col="ende">'+endDate+'</td>'+
+        '<td class="status"><span class="dot '+ (k.eingetragen ? '' : 'empty') +'"></span></td>'+
+        '<td class="actions">'+
+          '<button class="edit" data-edit="kurse" data-id="'+k.id+'">Bearbeiten</button>'+
+          '<button class="copy" data-copy="kurse" data-id="'+k.id+'">Kopieren</button>'+
           '<button class="del" data-del="kurse" data-id="'+k.id+'">Entfernen</button>'+
-        '</div>'+
-        '</div>';
+        '</td>'+
+        '</tr>';
     });
-    g('kursList').innerHTML=h;
+    g('kursList').innerHTML=h || '<tr><td colspan="12" style="text-align:center; color:var(--muted);">Keine Wochenkurse</td></tr>';
+    
+    // Sortier-Indikatoren aktualisieren
+    document.querySelectorAll('#kursTable th').forEach(function(th) {
+      th.classList.remove('sorted-asc', 'sorted-desc');
+      if (th.getAttribute('data-sort') === sortState.kurs.col) {
+        th.classList.add(sortState.kurs.asc ? 'sorted-asc' : 'sorted-desc');
+      }
+    });
   }
 
   function renderWs(){
+    // Sortieren
+    var sorted = [...state.workshops];
+    if (sortState.ws.col) {
+      sorted.sort(function(a, b) {
+        var valA = a[sortState.ws.col] !== undefined ? a[sortState.ws.col] : '';
+        var valB = b[sortState.ws.col] !== undefined ? b[sortState.ws.col] : '';
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return sortState.ws.asc ? valA - valB : valB - valA;
+        }
+        valA = String(valA || '').toLowerCase();
+        valB = String(valB || '').toLowerCase();
+        if (valA < valB) return sortState.ws.asc ? -1 : 1;
+        if (valA > valB) return sortState.ws.asc ? 1 : -1;
+        return 0;
+      });
+    }
+    
+    // Tabellenzeilen generieren
     var h='';
-    state.workshops.forEach(function(w){
-      // Berechne Gesamtstunden für Anzeige
+    sorted.forEach(function(w){
       var totalHours = getWorkshopTotalHours(w);
       var dates = getWorkshopDates(w);
       var dateInfo = '';
@@ -342,43 +449,37 @@
         }
       }
       
-      // Tageszeiten-Editierung
-      var zeitenHtml = '';
-      var tage = w.tage || 1;
-      if (!w.zeiten) w.zeiten = [];
-      for (var i = 0; i < tage; i++) {
-        var tagZeit = w.zeiten[i] || {von: '10:00', bis: '17:00'};
-        var tagDatum = dates[i] ? fmt(dates[i]) : 'Tag ' + (i+1);
-        zeitenHtml += '<div class="frow" style="margin-top:6px;">'+
-          '<label class="fld" style="min-width:100px;">'+tagDatum+'</label>'+
-          '<label class="fld">von<input type="time" data-t="workshops" data-id="'+w.id+'" data-f="zeiten" data-idx="'+i+'" data-sub="von" value="'+(tagZeit.von||'10:00')+'" style="width:90px;"></label>'+
-          '<label class="fld">bis<input type="time" data-t="workshops" data-id="'+w.id+'" data-f="zeiten" data-idx="'+i+'" data-sub="bis" value="'+(tagZeit.bis||'17:00')+'" style="width:90px;"></label>'+
-          '</div>';
+      // Uhrzeiten als String
+      var zeitenStr = '';
+      if (w.zeiten && w.zeiten.length > 0) {
+        zeitenStr = w.zeiten.map(function(z) { return (z.von||'?') + '–' + (z.bis||'?'); }).join(' · ');
       }
       
-      h+='<div class="item">'+
-        '<div class="frow">'+
-          '<label class="fld" style="flex:2; min-width:150px;">Titel<input type="text" data-t="workshops" data-id="'+w.id+'" data-f="titel" value="'+esc(w.titel)+'"></label>'+
-          '<label class="fld" style="flex:1; min-width:110px;">Dozent:in<input type="text" data-t="workshops" data-id="'+w.id+'" data-f="dozent" value="'+esc(w.dozent)+'"></label>'+
-        '</div>'+
-        '<div class="frow" style="margin-top:8px;">'+
-          '<label class="fld">Startdatum<input type="date" data-t="workshops" data-id="'+w.id+'" data-f="start" value="'+(w.start||'')+'"></label>'+
-          '<label class="fld">Tage<input type="number" data-t="workshops" data-id="'+w.id+'" data-f="tage" value="'+(w.tage||1)+'" min="1" style="width:70px;"></label>'+
-          '<label class="fld">Raum<input type="text" data-t="workshops" data-id="'+w.id+'" data-f="raum" value="'+esc(w.raum)+'" style="width:70px;"></label>'+
+      h+='<tr data-id="'+w.id+'">'+
+        '<td data-col="titel">'+esc(w.titel)+'</td>'+
+        '<td data-col="dozent">'+esc(w.dozent)+'</td>'+
+        '<td data-col="start">'+dateInfo+'</td>'+
+        '<td data-col="tage">'+(w.tage||1)+'</td>'+
+        '<td data-col="zeiten">'+zeitenStr+'</td>'+
+        '<td data-col="raum">'+esc(w.raum)+'</td>'+
+        '<td data-col="total">'+nf.format(totalHours)+'</td>'+
+        '<td class="status"><span class="dot '+ (w.eingetragen ? '' : 'empty') +'"></span></td>'+
+        '<td class="actions">'+
+          '<button class="edit" data-edit="workshops" data-id="'+w.id+'">Bearbeiten</button>'+
+          '<button class="copy" data-copy="workshops" data-id="'+w.id+'">Kopieren</button>'+
           '<button class="del" data-del="workshops" data-id="'+w.id+'">Entfernen</button>'+
-        '</div>'+
-        '<div style="margin-top:8px; padding-left:10px; border-left:2px solid var(--line);">'+
-          '<div style="font-size:12px; color:var(--muted); margin-bottom:4px;">Tageszeiten:</div>'+
-          zeitenHtml +
-        '</div>'+
-        '<div class="derived">'+
-          '<label class="chk"><input type="checkbox" data-t="workshops" data-id="'+w.id+'" data-f="eingetragen"'+(w.eingetragen?' checked':'')+'> Eingetragen</label>'+
-          (w.eingetragen ? '<span style="color:var(--pos); font-weight:bold; margin-left:10px;">✓</span>' : '') +
-          '<span>Daten: '+dateInfo+' · <b>Stunden: '+nf.format(totalHours)+' h</b></span>'+
-        '</div>'+
-        '</div>';
+        '</td>'+
+        '</tr>';
     });
-    g('wsList').innerHTML=h;
+    g('wsList').innerHTML=h || '<tr><td colspan="9" style="text-align:center; color:var(--muted);">Keine Workshops</td></tr>';
+    
+    // Sortier-Indikatoren aktualisieren
+    document.querySelectorAll('#wsTable th').forEach(function(th) {
+      th.classList.remove('sorted-asc', 'sorted-desc');
+      if (th.getAttribute('data-sort') === sortState.ws.col) {
+        th.classList.add(sortState.ws.asc ? 'sorted-asc' : 'sorted-desc');
+      }
+    });
   }
 
   function renderFeiertage(){
@@ -395,7 +496,216 @@
     g('feiertage').innerHTML=parts.join('<br>');
   }
 
-  function renderAll(){ renderSperr(); renderKurse(); renderWs(); renderFeiertage(); recompute(); }
+  function renderAll(){ 
+    renderSperr(); 
+    renderKurse(); 
+    renderWs(); 
+    renderFeiertage(); 
+    recompute();
+    // Sortierung neu einrichten (falls Tabellen neu geladen wurden)
+    setupSorting();
+  }
+  
+  // ---- Detailformulare ----------------------------------------------------
+  function renderKursDetail(kurs, isNew) {
+    var opts=''; for(var w=1;w<=6;w++){ opts+='<option value="'+w+'"'+(kurs.tag==w?' selected':'')+'>'+WD[w]+'</option>'; }
+    var h = '
+      <div class="frow">
+        <label class="fld" style="flex:2; min-width:150px;">Titel<input type="text" id="detKursTitel" value="'+esc(kurs.titel)+'"></label>
+        <label class="fld" style="flex:1; min-width:120px;">Dozent:in<input type="text" id="detKursDozent" value="'+esc(kurs.dozent)+'"></label>
+      </div>
+      <div class="frow" style="margin-top:8px;">
+        <label class="fld">Tag<select id="detKursTag">'+opts+'</select></label>
+        <label class="fld">Uhrzeit<input type="time" id="detKursZeit" value="'+(kurs.zeit||'')+'" style="width:96px;"></label>
+        <label class="fld">Start<input type="date" id="detKursStart" value="'+(kurs.start||'')+'"></label>
+        <label class="fld">Termine<input type="number" id="detKursSessions" value="'+(kurs.sessions||7)+'" min="1" max="30" style="width:74px;"></label>
+        <label class="fld">Std/Termin<input type="number" id="detKursStd" value="'+(kurs.std||3)+'" min="0.5" max="8" step="0.5" style="width:84px;"></label>
+        <label class="fld">Raum<input type="text" id="detKursRaum" value="'+esc(kurs.raum)+'" style="width:70px;"></label>
+      </div>
+      <div class="derived">
+        <label class="chk"><input type="checkbox" id="detKursInFerien"'+(kurs.inFerien?' checked':'')+'> läuft auch in Ferien</label>
+        <label class="chk"><input type="checkbox" id="detKursEingetragen"'+(kurs.eingetragen?' checked':'')+'> Eingetragen</label>
+      </div>
+      <div class="frow" style="margin-top:12px; gap:8px;">
+        <button class="add" id="detKursSave" data-id="'+kurs.id+'" data-isnew="'+isNew+'">Übernehmen</button>
+        <button id="detKursCancel">Abbrechen</button>
+      </div>';
+    g('kursDetailForm').innerHTML = h;
+    g('kursDetailForm').classList.add('active');
+    
+    // Event-Handler
+    g('detKursSave').addEventListener('click', function() {
+      saveKursDetail(kurs.id, this.getAttribute('data-isnew')==='true');
+    });
+    g('detKursCancel').addEventListener('click', function() {
+      g('kursDetailForm').classList.remove('active');
+      currentEditKurs = null;
+    });
+  }
+  
+  function saveKursDetail(id, isNew) {
+    var rec = state.kurse.filter(function(r){return r.id===id;})[0];
+    if (!rec && isNew) {
+      rec = {id:id, titel:'', dozent:'', tag:3, zeit:'18:00', start:'', sessions:7, std:3, raum:'', inFerien:false, eingetragen:false};
+      state.kurse.push(rec);
+    }
+    if (rec) {
+      rec.titel = g('detKursTitel').value;
+      rec.dozent = g('detKursDozent').value;
+      rec.tag = +g('detKursTag').value;
+      rec.zeit = g('detKursZeit').value;
+      rec.start = g('detKursStart').value;
+      rec.sessions = +g('detKursSessions').value;
+      rec.std = +g('detKursStd').value;
+      rec.raum = g('detKursRaum').value;
+      rec.inFerien = g('detKursInFerien').checked;
+      rec.eingetragen = g('detKursEingetragen').checked;
+    }
+    g('kursDetailForm').classList.remove('active');
+    currentEditKurs = null;
+    renderKurse();
+    recompute();
+    renderFeiertage();
+  }
+  
+  function renderWsDetail(ws, isNew) {
+    var h = '
+      <div class="frow">
+        <label class="fld" style="flex:2; min-width:150px;">Titel<input type="text" id="detWsTitel" value="'+esc(ws.titel)+'"></label>
+        <label class="fld" style="flex:1; min-width:110px;">Dozent:in<input type="text" id="detWsDozent" value="'+esc(ws.dozent)+'"></label>
+      </div>
+      <div class="frow" style="margin-top:8px;">
+        <label class="fld">Startdatum<input type="date" id="detWsStart" value="'+(ws.start||'')+'"></label>
+        <label class="fld">Tage<input type="number" id="detWsTage" value="'+(ws.tage||1)+'" min="1" style="width:70px;"></label>
+        <label class="fld">Raum<input type="text" id="detWsRaum" value="'+esc(ws.raum)+'" style="width:70px;"></label>
+      </div>
+      <div style="margin-top:8px; padding-left:10px; border-left:2px solid var(--line);">
+        <div style="font-size:12px; color:var(--muted); margin-bottom:4px;">Tageszeiten:</div>
+        <div id="detWsZeitenContainer"></div>
+      </div>
+      <div class="derived">
+        <label class="chk"><input type="checkbox" id="detWsEingetragen"'+(ws.eingetragen?' checked':'')+'> Eingetragen</label>
+      </div>
+      <div class="frow" style="margin-top:12px; gap:8px;">
+        <button class="add" id="detWsSave" data-id="'+ws.id+'" data-isnew="'+isNew+'">Übernehmen</button>
+        <button id="detWsCancel">Abbrechen</button>
+      </div>';
+    g('wsDetailForm').innerHTML = h;
+    g('wsDetailForm').classList.add('active');
+    
+    // Tageszeiten-Felder generieren
+    renderWsZeiten(ws);
+    
+    // Event-Handler
+    g('detWsSave').addEventListener('click', function() {
+      saveWsDetail(ws.id, this.getAttribute('data-isnew')==='true');
+    });
+    g('detWsCancel').addEventListener('click', function() {
+      g('wsDetailForm').classList.remove('active');
+      currentEditWs = null;
+    });
+    
+    // Bei Änderung der Tage: Felder anpassen
+    g('detWsTage').addEventListener('input', function() {
+      ws.tage = +this.value || 1;
+      renderWsZeiten(ws);
+    });
+  }
+  
+  function renderWsZeiten(ws) {
+    var tage = +g('detWsTage').value || 1;
+    var start = g('detWsStart').value ? parseD(g('detWsStart').value) : null;
+    var h = '';
+    for (var i = 0; i < tage; i++) {
+      var tagZeit = (ws.zeiten && ws.zeiten[i]) || {von: '10:00', bis: '17:00'};
+      var tagDatum = start ? fmt(addDays(start, i)) : 'Tag ' + (i+1);
+      h += '<div class="frow" style="margin-top:6px;">'+
+        '<label class="fld" style="min-width:100px;">'+tagDatum+'</label>'+
+        '<label class="fld">von<input type="time" id="detWsVon'+i+'" value="'+(tagZeit.von||'10:00')+'" style="width:90px;"></label>'+
+        '<label class="fld">bis<input type="time" id="detWsBis'+i+'" value="'+(tagZeit.bis||'17:00')+'" style="width:90px;"></label>'+
+        '</div>';
+    }
+    g('detWsZeitenContainer').innerHTML = h;
+  }
+  
+  function saveWsDetail(id, isNew) {
+    var rec = state.workshops.filter(function(r){return r.id===id;})[0];
+    if (!rec && isNew) {
+      rec = {id:id, titel:'', dozent:'', start:'', tage:1, zeiten:[], raum:'', eingetragen:false};
+      state.workshops.push(rec);
+    }
+    if (rec) {
+      rec.titel = g('detWsTitel').value;
+      rec.dozent = g('detWsDozent').value;
+      rec.start = g('detWsStart').value;
+      rec.tage = +g('detWsTage').value || 1;
+      rec.raum = g('detWsRaum').value;
+      rec.eingetragen = g('detWsEingetragen').checked;
+      
+      // Tageszeiten speichern
+      rec.zeiten = [];
+      var tage = +g('detWsTage').value || 1;
+      for (var i = 0; i < tage; i++) {
+        rec.zeiten.push({
+          von: g('detWsVon'+i).value || '10:00',
+          bis: g('detWsBis'+i).value || '17:00'
+        });
+      }
+    }
+    g('wsDetailForm').classList.remove('active');
+    currentEditWs = null;
+    renderWs();
+    recompute();
+  }
+  
+  // ---- Kopieren-Funktionen (Block 7) ----------------------------------------
+  function copyToClipboardKurs(kurs) {
+    var dates = genDates(kurs.start, +kurs.tag, +kurs.sessions, !!kurs.inFerien);
+    var dateStrs = dates.map(function(d) { return fmt(d); });
+    var text = 
+      kurs.titel + ' — Dozent: ' + (kurs.dozent || '?') + '\n' +
+      WD[+kurs.tag] + ' ' + (kurs.zeit||'?') + ' · Raum ' + (kurs.raum||'?') + '\n' +
+      kurs.sessions + ' Termine: ' + dateStrs.join(', ') + '\n' +
+      nf.format((+kurs.sessions) * (+kurs.std)) + ' Stunden gesamt';
+    
+    copyToClipboard(text);
+  }
+  
+  function copyToClipboardWs(ws) {
+    var dates = getWorkshopDates(ws);
+    var dateStrs = dates.map(function(d) { return fmt(d); });
+    var zeitenStrs = (ws.zeiten||[]).map(function(z) { return (z.von||'?') + '–' + (z.bis||'?'); });
+    var text = 
+      ws.titel + ' — Dozent: ' + (ws.dozent || '?') + '\n' +
+      dateStrs.join(', ') + ' · ' + zeitenStrs.join(' · ') + '\n' +
+      'Raum ' + (ws.raum||'?') + '\n' +
+      nf.format(getWorkshopTotalHours(ws)) + ' Stunden gesamt';
+    
+    copyToClipboard(text);
+  }
+  
+  function copyToClipboard(text) {
+    try {
+      navigator.clipboard.writeText(text).then(function() {
+        alert('Kopiert ✓');
+      });
+    } catch (e) {
+      // Fallback für file:// oder ältere Browser
+      var textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = 0;
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        alert('Kopiert ✓');
+      } catch (e2) {
+        alert('Kopieren fehlgeschlagen: ' + e2.message);
+      }
+      document.body.removeChild(textarea);
+    }
+  }
 
   // ---- Berechnung (ohne Neuaufbau der Eingaben) -------------------------
   function recompute(){
@@ -404,16 +714,7 @@
       var dates=genDates(k.start, +k.tag, +k.sessions, !!k.inFerien);
       var hrs=(+k.sessions)*(+k.std);
       sumWk+=hrs;
-      var span=el('d-'+k.id); if(!el('d-'+k.id)) return;
-      var info='';
-      if(dates.length){
-        var first=dates[0], last=dates[dates.length-1];
-        var weeks=Math.round((last-first)/(7*86400000))+1;
-        var verschoben=weeks-dates.length;
-        info=WD[+k.tag]+' · Ende '+fmt(last)+' · '+nf.format(hrs)+' h';
-        if(verschoben>0) info+=' · <span class="warn">'+verschoben+' Wo. verschoben</span>';
-      } else { info='<span class="warn">Startdatum prüfen</span>'; }
-      el('d-'+k.id).innerHTML=info;
+      // d-*-Spans werden nicht mehr verwendet (Tabellenansicht)
     });
     var sumWs=0; state.workshops.forEach(function(w){ sumWs+=getWorkshopTotalHours(w); });
 
@@ -447,7 +748,6 @@
     g('b-ws').innerHTML=nf.format(sumWs)+' / '+nf.format(state.sollWs)+' h '+badge(dWs);
     g('b-konf').innerHTML = konf.length? '<span class="neg">'+konf.length+'</span>' : '<span class="pos">0</span>';
   }
-  function el(id){ return document.getElementById(id); }
   function row(label, ist, soll, d){
     var cls = Math.abs(d) <= Math.max(5, soll*0.03) ? 'pos' : (d<0?'warnc':'pos');
     return '<div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:5px;">'+
@@ -459,6 +759,37 @@
     return '<span class="'+(d<0?'warnc':'pos')+'">'+(d>=0?'+':'')+nf.format(d)+'</span>';
   }
 
+  // ---- Tabellen-Sortierung ------------------------------------------------
+  function setupSorting() {
+    // Kurse
+    document.querySelectorAll('#kursTable th[data-sort]').forEach(function(th) {
+      th.addEventListener('click', function() {
+        var col = this.getAttribute('data-sort');
+        if (sortState.kurs.col === col) {
+          sortState.kurs.asc = !sortState.kurs.asc;
+        } else {
+          sortState.kurs.col = col;
+          sortState.kurs.asc = true;
+        }
+        renderKurse();
+      });
+    });
+    
+    // Workshops
+    document.querySelectorAll('#wsTable th[data-sort]').forEach(function(th) {
+      th.addEventListener('click', function() {
+        var col = this.getAttribute('data-sort');
+        if (sortState.ws.col === col) {
+          sortState.ws.asc = !sortState.ws.asc;
+        } else {
+          sortState.ws.col = col;
+          sortState.ws.asc = true;
+        }
+        renderWs();
+      });
+    });
+  }
+  
   // ---- Eingaben (Delegation, kein Fokusverlust) -------------------------
   document.addEventListener('input', onEdit);
   document.addEventListener('change', onEdit);
@@ -499,18 +830,55 @@
   }
   // Hinzufügen / Entfernen
   g('addSperr').addEventListener('click', function(){ state.sperr.push({id:uid(),name:'Neue Sperrzeit',von:'',bis:''}); renderSperr(); });
-  g('addKurs').addEventListener('click', function(){ state.kurse.push({id:uid(),titel:'Neuer Kurs',dozent:'',tag:3,zeit:'18:00',start:'',sessions:7,std:3,raum:'',inFerien:false,eingetragen:false}); renderKurse(); recompute(); });
-  g('addWs').addEventListener('click', function(){ 
-    state.workshops.push({id:uid(),titel:'Neuer Workshop',dozent:'',start:'',tage:1,zeiten:[{von:'10:00',bis:'17:00'}],raum:'',eingetragen:false}); 
-    renderWs(); recompute(); 
+  g('addKurs').addEventListener('click', function(){ 
+    var newKurs = {id:uid(),titel:'Neuer Kurs',dozent:'',tag:3,zeit:'18:00',start:'',sessions:7,std:3,raum:'',inFerien:false,eingetragen:false};
+    renderKursDetail(newKurs, true);
   });
+  g('addWs').addEventListener('click', function(){ 
+    var newWs = {id:uid(),titel:'Neuer Workshop',dozent:'',start:'',tage:1,zeiten:[{von:'10:00',bis:'17:00'}],raum:'',eingetragen:false};
+    renderWsDetail(newWs, true);
+  });
+  
+  // Klick-Handler für Tabellenaktionen
   document.addEventListener('click', function(e){
-    var del=e.target.getAttribute&&e.target.getAttribute('data-del'); if(!del) return;
-    var id=e.target.getAttribute('data-id');
-    state[del]=state[del].filter(function(r){return r.id!==id;});
-    if(del==='sperr'){ renderSperr(); renderFeiertage(); recompute(); }
-    else if(del==='kurse'){ renderKurse(); recompute(); }
-    else { renderWs(); recompute(); }
+    // Löschen
+    var del=e.target.getAttribute&&e.target.getAttribute('data-del'); 
+    if(del){
+      var id=e.target.getAttribute('data-id');
+      state[del]=state[del].filter(function(r){return r.id!==id;});
+      if(del==='sperr'){ renderSperr(); renderFeiertage(); recompute(); }
+      else if(del==='kurse'){ renderKurse(); recompute(); }
+      else { renderWs(); recompute(); }
+      return;
+    }
+    
+    // Bearbeiten
+    var edit=e.target.getAttribute&&e.target.getAttribute('data-edit');
+    if(edit){
+      var id=e.target.getAttribute('data-id');
+      if(edit==='kurse'){
+        var kurs = state.kurse.filter(function(r){return r.id===id;})[0];
+        if(kurs) renderKursDetail(kurs, false);
+      } else if(edit==='workshops'){
+        var ws = state.workshops.filter(function(r){return r.id===id;})[0];
+        if(ws) renderWsDetail(ws, false);
+      }
+      return;
+    }
+    
+    // Kopieren (für Block 7 vorbereiten)
+    var copy=e.target.getAttribute&&e.target.getAttribute('data-copy');
+    if(copy){
+      var id=e.target.getAttribute('data-id');
+      if(copy==='kurse'){
+        var kurs = state.kurse.filter(function(r){return r.id===id;})[0];
+        if(kurs) copyToClipboardKurs(kurs);
+      } else if(copy==='workshops'){
+        var ws = state.workshops.filter(function(r){return r.id===id;})[0];
+        if(ws) copyToClipboardWs(ws);
+      }
+      return;
+    }
   });
 
   // ---- Szenarien --------------------------------------------------------
@@ -549,6 +917,9 @@
   g('planjahr').value = state.planjahr;
   g('sollWk').value = state.sollWk;
   g('sollWs').value = state.sollWs;
+  
+  // Sortierung einrichten
+  setupSorting();
   
   refreshList('');
   renderAll();
