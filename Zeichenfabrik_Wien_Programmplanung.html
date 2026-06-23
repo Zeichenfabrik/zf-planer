@@ -610,11 +610,20 @@
     g('kursDetailForm').innerHTML = h;
     g('kursDetailForm').classList.add('active');
     
-    // Event-Handler
-    g('detKursSave').addEventListener('click', function() {
+    // Event-Handler (vorherige entfernen, um Duplikate zu vermeiden)
+    var saveBtn = g('detKursSave');
+    var cancelBtn = g('detKursCancel');
+    
+    // Clone the buttons to remove old event listeners
+    var saveBtnClone = saveBtn.cloneNode(true);
+    var cancelBtnClone = cancelBtn.cloneNode(true);
+    saveBtn.parentNode.replaceChild(saveBtnClone, saveBtn);
+    cancelBtn.parentNode.replaceChild(cancelBtnClone, cancelBtn);
+    
+    saveBtnClone.addEventListener('click', function() {
       saveKursDetail(kurs.id, this.getAttribute('data-isnew')==='true');
     });
-    g('detKursCancel').addEventListener('click', function() {
+    cancelBtnClone.addEventListener('click', function() {
       g('kursDetailForm').classList.remove('active');
       currentEditKurs = null;
     });
@@ -673,17 +682,29 @@
     // Tageszeiten-Felder generieren
     renderWsZeiten(ws);
     
-    // Event-Handler
-    g('detWsSave').addEventListener('click', function() {
+    // Event-Handler (vorherige entfernen, um Duplikate zu vermeiden)
+    var saveBtn = g('detWsSave');
+    var cancelBtn = g('detWsCancel');
+    var tageInput = g('detWsTage');
+    
+    // Clone the buttons to remove old event listeners
+    var saveBtnClone = saveBtn.cloneNode(true);
+    var cancelBtnClone = cancelBtn.cloneNode(true);
+    var tageInputClone = tageInput.cloneNode(true);
+    saveBtn.parentNode.replaceChild(saveBtnClone, saveBtn);
+    cancelBtn.parentNode.replaceChild(cancelBtnClone, cancelBtn);
+    tageInput.parentNode.replaceChild(tageInputClone, tageInput);
+    
+    saveBtnClone.addEventListener('click', function() {
       saveWsDetail(ws.id, this.getAttribute('data-isnew')==='true');
     });
-    g('detWsCancel').addEventListener('click', function() {
+    cancelBtnClone.addEventListener('click', function() {
       g('wsDetailForm').classList.remove('active');
       currentEditWs = null;
     });
     
     // Bei Änderung der Tage: Felder anpassen
-    g('detWsTage').addEventListener('input', function() {
+    tageInputClone.addEventListener('input', function() {
       ws.tage = +this.value || 1;
       renderWsZeiten(ws);
     });
