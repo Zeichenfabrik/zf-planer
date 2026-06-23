@@ -1031,17 +1031,6 @@
     if(f==='von'||f==='bis'||f==='start') renderFeiertage();
     if(tbl==='workshops' && (f==='tage'||f==='start'||f==='zeiten')) renderWs();
   }
-  // Hinzufügen / Entfernen
-  g('addSperr').addEventListener('click', function(){ state.sperr.push({id:uid(),name:'Neue Sperrzeit',von:'',bis:''}); renderSperr(); });
-  g('addKurs').addEventListener('click', function(){ 
-    var newKurs = {id:uid(),titel:'Neuer Kurs',dozent:'',tag:3,zeit:'18:00',start:'',sessions:7,std:3,raum:'',inFerien:false,eingetragen:false};
-    renderKursDetail(newKurs, true);
-  });
-  g('addWs').addEventListener('click', function(){ 
-    var newWs = {id:uid(),titel:'Neuer Workshop',dozent:'',start:'',tage:1,zeiten:[{von:'10:00',bis:'17:00'}],raum:'',eingetragen:false};
-    renderWsDetail(newWs, true);
-  });
-  
   // Klick-Handler für Tabellenaktionen
   document.addEventListener('click', function(e){
     // Löschen
@@ -1178,6 +1167,17 @@
   
   // Sortierung einrichten
   setupSorting();
+  
+  // Event-Handler für Buttons (müssen nach DOM-Load registriert werden)
+  g('addSperr').addEventListener('click', function(){ state.sperr.push({id:uid(),name:'Neue Sperrzeit',von:'',bis:''}); renderSperr(); });
+  g('addKurs').addEventListener('click', function(){ 
+    var newKurs = {id:uid(),titel:'Neuer Kurs',dozent:'',tag:3,zeit:'18:00',start:'',sessions:7,std:3,raum:'',inFerien:false,eingetragen:false};
+    renderKursDetail(newKurs, true);
+  });
+  g('addWs').addEventListener('click', function(){ 
+    var newWs = {id:uid(),titel:'Neuer Workshop',dozent:'',start:'',tage:1,zeiten:[{von:'10:00',bis:'17:00'}],raum:'',eingetragen:false};
+    renderWsDetail(newWs, true);
+  });
   
   refreshList('');
   renderAll();
