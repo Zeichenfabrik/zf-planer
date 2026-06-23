@@ -341,19 +341,38 @@
         }
       }
       
-      h+='<div class="item"><div class="frow">'+
-        '<label class="fld" style="flex:2; min-width:150px;">Titel<input type="text" data-t="workshops" data-id="'+w.id+'" data-f="titel" value="'+esc(w.titel)+'"></label>'+
-        '<label class="fld" style="flex:1; min-width:110px;">Dozent:in<input type="text" data-t="workshops" data-id="'+w.id+'" data-f="dozent" value="'+esc(w.dozent)+'"></label>'+
+      // Tageszeiten-Editierung
+      var zeitenHtml = '';
+      var tage = w.tage || 1;
+      if (!w.zeiten) w.zeiten = [];
+      for (var i = 0; i < tage; i++) {
+        var tagZeit = w.zeiten[i] || {von: '10:00', bis: '17:00'};
+        var tagDatum = dates[i] ? fmt(dates[i]) : 'Tag ' + (i+1);
+        zeitenHtml += '<div class="frow" style="margin-top:6px;">'+
+          '<label class="fld" style="min-width:100px;">'+tagDatum+'</label>'+
+          '<label class="fld">von<input type="time" data-t="workshops" data-id="'+w.id+'" data-f="zeiten" data-idx="'+i+'" data-sub="von" value="'+(tagZeit.von||'10:00')+'" style="width:90px;"></label>'+
+          '<label class="fld">bis<input type="time" data-t="workshops" data-id="'+w.id+'" data-f="zeiten" data-idx="'+i+'" data-sub="bis" value="'+(tagZeit.bis||'17:00')+'" style="width:90px;"></label>'+
+          '</div>';
+      }
+      
+      h+='<div class="item">'+
+        '<div class="frow">'+
+          '<label class="fld" style="flex:2; min-width:150px;">Titel<input type="text" data-t="workshops" data-id="'+w.id+'" data-f="titel" value="'+esc(w.titel)+'"></label>'+
+          '<label class="fld" style="flex:1; min-width:110px;">Dozent:in<input type="text" data-t="workshops" data-id="'+w.id+'" data-f="dozent" value="'+esc(w.dozent)+'"></label>'+
         '</div>'+
         '<div class="frow" style="margin-top:8px;">'+
-        '<label class="fld">Startdatum<input type="date" data-t="workshops" data-id="'+w.id+'" data-f="start" value="'+(w.start||'')+'"></label>'+
-        '<label class="fld">Tage<input type="number" data-t="workshops" data-id="'+w.id+'" data-f="tage" value="'+(w.tage||1)+'" min="1" style="width:70px;"></label>'+
-        '<label class="fld">Raum<input type="text" data-t="workshops" data-id="'+w.id+'" data-f="raum" value="'+esc(w.raum)+'" style="width:70px;"></label>'+
-        '<button class="del" data-del="workshops" data-id="'+w.id+'">Entfernen</button>'+
+          '<label class="fld">Startdatum<input type="date" data-t="workshops" data-id="'+w.id+'" data-f="start" value="'+(w.start||'')+'"></label>'+
+          '<label class="fld">Tage<input type="number" data-t="workshops" data-id="'+w.id+'" data-f="tage" value="'+(w.tage||1)+'" min="1" style="width:70px;"></label>'+
+          '<label class="fld">Raum<input type="text" data-t="workshops" data-id="'+w.id+'" data-f="raum" value="'+esc(w.raum)+'" style="width:70px;"></label>'+
+          '<button class="del" data-del="workshops" data-id="'+w.id+'">Entfernen</button>'+
+        '</div>'+
+        '<div style="margin-top:8px; padding-left:10px; border-left:2px solid var(--line);">'+
+          '<div style="font-size:12px; color:var(--muted); margin-bottom:4px;">Tageszeiten:</div>'+
+          zeitenHtml +
         '</div>'+
         '<div class="derived">'+
-        '<label class="chk"><input type="checkbox" data-t="workshops" data-id="'+w.id+'" data-f="eingetragen"'+(w.eingetragen?' checked':'')+'> Eingetragen</label>'+
-        '<span>Daten: '+dateInfo+' · Stunden: '+nf.format(totalHours)+' h</span>'+
+          '<label class="chk"><input type="checkbox" data-t="workshops" data-id="'+w.id+'" data-f="eingetragen"'+(w.eingetragen?' checked':'')+'> Eingetragen</label>'+
+          '<span>Daten: '+dateInfo+' · <b>Stunden: '+nf.format(totalHours)+' h</b></span>'+
         '</div>'+
         '</div>';
     });
@@ -449,9 +468,32 @@
     var tbl=t.getAttribute&&t.getAttribute('data-t'), id=t.getAttribute&&t.getAttribute('data-id'), f=t.getAttribute&&t.getAttribute('data-f');
     if(!tbl||!id||!f) return;
     var rec=state[tbl].filter(function(r){return r.id===id;})[0]; if(!rec) return;
-    rec[f] = (t.type==='checkbox')? t.checked : t.value;
+    
+    // Spezialfall: zeiten-Array für Workshops
+    if(f==='zeiten'){
+      var idx=+t.getAttribute('data-idx');
+      var sub=t.getAttribute('data-sub');
+      if(!rec.zeiten) rec.zeiten=[];
+      if(!rec.zeiten[idx]) rec.zeiten[idx]={};
+      rec.zeiten[idx][sub]=t.value;
+    } else {
+      rec[f] = (t.type==='checkbox')? t.checked : t.value;
+    }
+    
+    // Wenn tage geändert wird, zeiten-Array anpassen
+    if(f==='tage' && tbl==='workshops'){
+      var newTage=+t.value||1;
+      if(!rec.zeiten) rec.zeiten=[];
+      // Array auf neue Länge anpassen
+      while(rec.zeiten.length < newTage) {
+        rec.zeiten.push({von:'10:00', bis:'17:00'});
+      }
+      rec.zeiten.length=newTage;
+    }
+    
     recompute();
     if(f==='von'||f==='bis'||f==='start') renderFeiertage();
+    if(tbl==='workshops' && (f==='tage'||f==='start'||f==='zeiten')) renderWs();
   }
   // Hinzufügen / Entfernen
   g('addSperr').addEventListener('click', function(){ state.sperr.push({id:uid(),name:'Neue Sperrzeit',von:'',bis:''}); renderSperr(); });
