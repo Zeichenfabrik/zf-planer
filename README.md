@@ -1,7 +1,10 @@
-# Zeichenfabrik Standortrechner
+# Zeichenfabrik – Standortrechner & Programmplanung
 
-Zwei eigenständige Kalkulations-Apps für die Standorte **Wien** und **Graz**.
-Jede ist eine einzelne HTML-Datei – kein Server, keine Abhängigkeiten, kein Build.
+Zwei eigenständige Tools für die Standorte **Wien** und **Graz**:
+
+## 1. Standortrechner
+
+Zwei Kalkulations-Apps (Wien & Graz). Jede ist eine einzelne HTML-Datei – kein Server, keine Abhängigkeiten, kein Build.
 Im Browser öffnen (Doppelklick), läuft offline.
 
 ```
@@ -9,9 +12,63 @@ zeichenfabrik-rechner/
 ├── Zeichenfabrik_Wien_Standortrechner.html
 ├── Zeichenfabrik_Graz_Standortrechner.html
 └── README.md
+
+zeichenfabrik-planung/
+└── Zeichenfabrik_Wien_Programmplanung.html
 ```
 
-## Grundkonvention
+---
+
+## 2. Programmplanung (Wien)
+
+Ein **Stundenplan-Entwurfstool** für den Standort Wien. Ermöglicht das Erstellen und Prüfen von Kurs- und Workshop-Plänen **vor** der CMS-Eintragung.
+
+- **Datei:** `Zeichenfabrik_Wien_Programmplanung.html`
+- **Zweck:** Stundenplan-Entwurf · Soll-Ist-Abgleich zum Plansoll · feiertags- und ferienbewusst
+- **Läuft offline** (einzelne HTML-Datei, keine Abhängigkeiten)
+
+### Funktionen
+
+| Funktion | Beschreibung |
+|----------|--------------|
+| **Planjahr** | Wählbares Kalenderjahr (Default: 2026) für Soll-Ist-Berechnung |
+| **Wochenkurse** | Wöchentliche Kurse mit automatischer Feiertags-/Ferien-Aussetzung (verschieben sich nach hinten) |
+| **Workshops** | Mehrtägige Blocktermine (von Sperrzeiten ausgenommen) |
+| **Sperrzeiten** | Editierbare Ferien/Schließzeiten (Wien vorbefüllt) |
+| **Eingetragen-Status** | Häkchen pro Kurs/Workshop, um den Live-Betrieb zu tracken |
+| **Soll-Ist-Abgleich** | Jahresgenaue Berechnung: Nur Termine/Tage im Planjahr zählen |
+| **Konfliktprüfung** | Prüft Raum- und Dozenten-Doppelbelegungen auf Datumsebene |
+| **Kopieren** | Kopiert Kurs-/Workshop-Details als Textblock in die Zwischenablage |
+| **JSON Export/Import** | Sichert den Plan als Datei (z. B. `zf-programm-2026.json`) |
+| **Szenarien** | Speichern/Laden von Plänen im Browser (localStorage) |
+
+### Bedienung
+
+1. **Plansoll** eintragen (aus dem Standortrechner)
+2. **Sperrzeiten** anpassen (falls nötig)
+3. **Kurse/Workshops** hinzufügen (über „+ Kurs hinzufügen“ / „+ Workshop hinzufügen“)
+4. **Detailformular** nutzen, um Einträge zu bearbeiten
+5. **Soll-Ist** prüfen (automatisch aktualisiert)
+6. **Konflikte** auflösen (falls vorhanden)
+7. **Exportieren** (JSON) für Datensicherheit
+
+### Technische Hinweise
+
+- **Feiertage:** Automatisch berechnet (Oster-Algorithmus für Österreich)
+- **Ferien:** Voreingestellt für Wien (Schuljahre 2025/26 & 2026/27), frei editierbar
+- **Workshops:** Bleiben von Sperrzeiten ausgenommen (feste Blocktermine)
+- **Jahresgenaue Soll-Ist:** Nur Termine/Tage im gewählten Planjahr werden gezählt
+- **Konfliktprüfung:** Prüft alle Kurs-Sitzungen und Workshop-Tage auf Überlappungen (Raum/Dozent)
+
+### Datenfluss & Speicherung
+
+- **localStorage:** Szenarien werden lokal im Browser gespeichert (`zf_wien_programm_v1`)
+- **JSON Export:** Erstellt eine Datei (z. B. `zf-programm-2026.json`) für Datensicherheit
+- **JSON Import:** Lädt eine vorher exportierte Datei und ersetzt den aktuellen Zustand
+
+---
+
+## Standortrechner – Grundkonvention
 
 **Alle Werte sind netto** (USt 20 % herausgerechnet). Es gibt bewusst keine
 Brutto-Eingabefelder, um Missverständnisse zu vermeiden. Kurspreis 15 €/Std/TN
