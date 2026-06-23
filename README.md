@@ -15,7 +15,18 @@ zeichenfabrik-rechner/
 
 zeichenfabrik-planung/
 └── Zeichenfabrik_Wien_Programmplanung.html
-```
+
+---
+
+## All-in-One App
+
+Für bequemes Umschalten zwischen allen Tools gibt es eine **kombinierte Datei**:
+- **Datei:** `Zeichenfabrik-All-in-One.html`
+- **Funktionen:**
+  - Tab-Navigation zum Umschalten zwischen den drei Tools
+  - Gemeinsames Design (Hell/Dunkel-Modus)
+  - Lädt die einzelnen Apps als IFrames
+- **Voraussetzung:** Die drei HTML-Dateien müssen im gleichen Ordner liegen
 
 ---
 
