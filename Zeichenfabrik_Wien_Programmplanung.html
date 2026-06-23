@@ -114,6 +114,7 @@
   <h2>Plansoll (aus dem Standortrechner)</h2>
   <div class="sub">Zielstunden je Schicht — hier eintragen, was der Rechner vorgibt</div>
   <div class="soll">
+    <label class="fld" style="min-width:150px;">Planjahr<input type="number" id="planjahr" value="2026" min="2020" max="2030" step="1"></label>
     <label class="fld" style="min-width:170px;">Wochenkurse Soll (h/Jahr)<input type="number" id="sollWk" value="1000" min="0" step="10"></label>
     <label class="fld" style="min-width:170px;">Workshops Soll (h/Jahr)<input type="number" id="sollWs" value="532" min="0" step="10"></label>
   </div>
@@ -229,10 +230,36 @@
     return out;
   }
   function toMin(t){ if(!t) return null; var p=t.split(':'); return (+p[0])*60+(+p[1]); }
+  
+  // Helfer für Workshops: Tagesdaten aus start + tage generieren
+  function getWorkshopDates(ws) {
+    var start = parseD(ws.start);
+    if (!start || !ws.tage) return [];
+    var dates = [];
+    for (var i = 0; i < ws.tage; i++) {
+      dates.push(addDays(start, i));
+    }
+    return dates;
+  }
+  
+  // Gesamtstunden für einen Workshop berechnen
+  function getWorkshopTotalHours(ws) {
+    if (!ws.zeiten) return 0;
+    var total = 0;
+    ws.zeiten.forEach(function(z) {
+      var vonMin = toMin(z.von);
+      var bisMin = toMin(z.bis);
+      if (vonMin !== null && bisMin !== null) {
+        total += (bisMin - vonMin) / 60;
+      }
+    });
+    return total;
+  }
 
   // ---- State ------------------------------------------------------------
   function freshState(){
     return {
+      planjahr: 2026,
       sollWk:1000, sollWs:532,
       sperr:[
         {id:uid(),name:'Semesterferien 2026', von:'2026-01-31', bis:'2026-02-08'},
@@ -247,10 +274,10 @@
         {id:uid(),name:'Sommerferien 2027',   von:'2027-07-03', bis:'2027-09-05'}
       ],
       kurse:[
-        {id:uid(),titel:'Aktzeichnen Grundkurs', dozent:'', tag:3, zeit:'18:00', start:'2026-03-04', sessions:7, std:3, raum:'1', inFerien:false}
+        {id:uid(),titel:'Aktzeichnen Grundkurs', dozent:'', tag:3, zeit:'18:00', start:'2026-03-04', sessions:7, std:3, raum:'1', inFerien:false, eingetragen:false}
       ],
       workshops:[
-        {id:uid(),titel:'Wochenend-Workshop Aquarell', dozent:'', datum:'2026-04-18', stunden:12, raum:'2'}
+        {id:uid(),titel:'Wochenend-Workshop Aquarell', dozent:'', start:'2026-04-18', tage:1, zeiten:[{von:'10:00', bis:'17:00'}], raum:'2', eingetragen:false}
       ]
     };
   }
@@ -291,6 +318,7 @@
         '</div>'+
         '<div class="derived">'+
           '<label class="chk"><input type="checkbox" data-t="kurse" data-id="'+k.id+'" data-f="inFerien"'+(k.inFerien?' checked':'')+'> läuft auch in Ferien</label>'+
+          '<label class="chk"><input type="checkbox" data-t="kurse" data-id="'+k.id+'" data-f="eingetragen"'+(k.eingetragen?' checked':'')+'> Eingetragen</label>'+
           '<span id="d-'+k.id+'"></span>'+
           '<button class="del" data-del="kurse" data-id="'+k.id+'">Entfernen</button>'+
         '</div>'+
@@ -302,14 +330,32 @@
   function renderWs(){
     var h='';
     state.workshops.forEach(function(w){
+      // Berechne Gesamtstunden für Anzeige
+      var totalHours = getWorkshopTotalHours(w);
+      var dates = getWorkshopDates(w);
+      var dateInfo = '';
+      if (dates.length > 0) {
+        dateInfo = fmt(dates[0]);
+        if (dates.length > 1) {
+          dateInfo += ' – ' + fmt(dates[dates.length-1]);
+        }
+      }
+      
       h+='<div class="item"><div class="frow">'+
         '<label class="fld" style="flex:2; min-width:150px;">Titel<input type="text" data-t="workshops" data-id="'+w.id+'" data-f="titel" value="'+esc(w.titel)+'"></label>'+
         '<label class="fld" style="flex:1; min-width:110px;">Dozent:in<input type="text" data-t="workshops" data-id="'+w.id+'" data-f="dozent" value="'+esc(w.dozent)+'"></label>'+
-        '<label class="fld">Datum<input type="date" data-t="workshops" data-id="'+w.id+'" data-f="datum" value="'+w.datum+'"></label>'+
-        '<label class="fld">Stunden<input type="number" data-t="workshops" data-id="'+w.id+'" data-f="stunden" value="'+w.stunden+'" min="0" step="1" style="width:80px;"></label>'+
+        '</div>'+
+        '<div class="frow" style="margin-top:8px;">'+
+        '<label class="fld">Startdatum<input type="date" data-t="workshops" data-id="'+w.id+'" data-f="start" value="'+(w.start||'')+'"></label>'+
+        '<label class="fld">Tage<input type="number" data-t="workshops" data-id="'+w.id+'" data-f="tage" value="'+(w.tage||1)+'" min="1" style="width:70px;"></label>'+
         '<label class="fld">Raum<input type="text" data-t="workshops" data-id="'+w.id+'" data-f="raum" value="'+esc(w.raum)+'" style="width:70px;"></label>'+
         '<button class="del" data-del="workshops" data-id="'+w.id+'">Entfernen</button>'+
-        '</div></div>';
+        '</div>'+
+        '<div class="derived">'+
+        '<label class="chk"><input type="checkbox" data-t="workshops" data-id="'+w.id+'" data-f="eingetragen"'+(w.eingetragen?' checked':'')+'> Eingetragen</label>'+
+        '<span>Daten: '+dateInfo+' · Stunden: '+nf.format(totalHours)+' h</span>'+
+        '</div>'+
+        '</div>';
     });
     g('wsList').innerHTML=h;
   }
@@ -348,7 +394,7 @@
       } else { info='<span class="warn">Startdatum prüfen</span>'; }
       el('d-'+k.id).innerHTML=info;
     });
-    var sumWs=0; state.workshops.forEach(function(w){ sumWs+=(+w.stunden)||0; });
+    var sumWs=0; state.workshops.forEach(function(w){ sumWs+=getWorkshopTotalHours(w); });
 
     // Soll-Ist
     var dWk=sumWk-(+state.sollWk), dWs=sumWs-(+state.sollWs);
@@ -397,6 +443,7 @@
   document.addEventListener('change', onEdit);
   function onEdit(e){
     var t=e.target;
+    if(t.id==='planjahr'){ state.planjahr=+t.value||2026; recompute(); return; }
     if(t.id==='sollWk'){ state.sollWk=+t.value||0; recompute(); return; }
     if(t.id==='sollWs'){ state.sollWs=+t.value||0; recompute(); return; }
     var tbl=t.getAttribute&&t.getAttribute('data-t'), id=t.getAttribute&&t.getAttribute('data-id'), f=t.getAttribute&&t.getAttribute('data-f');
@@ -408,8 +455,11 @@
   }
   // Hinzufügen / Entfernen
   g('addSperr').addEventListener('click', function(){ state.sperr.push({id:uid(),name:'Neue Sperrzeit',von:'',bis:''}); renderSperr(); });
-  g('addKurs').addEventListener('click', function(){ state.kurse.push({id:uid(),titel:'Neuer Kurs',dozent:'',tag:3,zeit:'18:00',start:'',sessions:7,std:3,raum:'',inFerien:false}); renderKurse(); recompute(); });
-  g('addWs').addEventListener('click', function(){ state.workshops.push({id:uid(),titel:'Neuer Workshop',dozent:'',datum:'',stunden:12,raum:''}); renderWs(); recompute(); });
+  g('addKurs').addEventListener('click', function(){ state.kurse.push({id:uid(),titel:'Neuer Kurs',dozent:'',tag:3,zeit:'18:00',start:'',sessions:7,std:3,raum:'',inFerien:false,eingetragen:false}); renderKurse(); recompute(); });
+  g('addWs').addEventListener('click', function(){ 
+    state.workshops.push({id:uid(),titel:'Neuer Workshop',dozent:'',start:'',tage:1,zeiten:[{von:'10:00',bis:'17:00'}],raum:'',eingetragen:false}); 
+    renderWs(); recompute(); 
+  });
   document.addEventListener('click', function(e){
     var del=e.target.getAttribute&&e.target.getAttribute('data-del'); if(!del) return;
     var id=e.target.getAttribute('data-id');
@@ -434,6 +484,7 @@
   g('btnLoad').addEventListener('click', function(){
     var name=g('scen').value; if(!name) return; var o=store(); if(!o[name]) return;
     state=JSON.parse(JSON.stringify(o[name]));
+    g('planjahr').value=state.planjahr;
     g('sollWk').value=state.sollWk; g('sollWs').value=state.sollWs;
     renderAll();
   });
@@ -443,9 +494,18 @@
   });
   g('btnReset').addEventListener('click', function(){
     if(!confirm('Auf Startwerte zurücksetzen? Nicht gespeicherte Eingaben gehen verloren.')) return;
-    state=freshState(); g('sollWk').value=state.sollWk; g('sollWs').value=state.sollWs; renderAll();
+    state=freshState(); 
+    g('planjahr').value=state.planjahr;
+    g('sollWk').value=state.sollWk; 
+    g('sollWs').value=state.sollWs; 
+    renderAll();
   });
 
+  // Initialisiere UI-Felder
+  g('planjahr').value = state.planjahr;
+  g('sollWk').value = state.sollWk;
+  g('sollWs').value = state.sollWs;
+  
   refreshList('');
   renderAll();
 })();
