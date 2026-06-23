@@ -222,7 +222,7 @@
 <!-- SOLL-IST & KONFLIKTE -->
 <div class="card" style="background:var(--card2); border:1px solid var(--line);">
   <h2>Soll-Ist-Abgleich &amp; Konflikte</h2>
-  <div class="sub">&nbsp;</div>
+  <div class="sub">für das Planjahr <strong id="abgleichJahr"></strong></div>
   <div id="abgleich"></div>
   <div id="konflikte" style="margin-top:10px;"></div>
 </div>
@@ -751,20 +751,52 @@
 
   // ---- Berechnung (ohne Neuaufbau der Eingaben) -------------------------
   function recompute(){
-    var sumWk=0;
+    var sumWk=0; // Alle Termine (für die schlanke Liste)
+    var sumWkYear=0; // Nur Termine im Planjahr (für Soll-Ist-Panel)
     state.kurse.forEach(function(k){
       var dates=genDates(k.start, +k.tag, +k.sessions, !!k.inFerien);
       var hrs=(+k.sessions)*(+k.std);
       sumWk+=hrs;
-      // d-*-Spans werden nicht mehr verwendet (Tabellenansicht)
+      
+      // Jahresgenaue Berechnung: Nur Termine im Planjahr
+      var yearHrs = 0;
+      dates.forEach(function(d) {
+        if (d.getFullYear() === state.planjahr) {
+          yearHrs += (+k.std);
+        }
+      });
+      sumWkYear += yearHrs;
     });
-    var sumWs=0; state.workshops.forEach(function(w){ sumWs+=getWorkshopTotalHours(w); });
+    
+    var sumWs=0; // Alle Tage (für die schlanke Liste)
+    var sumWsYear=0; // Nur Tage im Planjahr (für Soll-Ist-Panel)
+    state.workshops.forEach(function(w){
+      var totalHours = getWorkshopTotalHours(w);
+      sumWs += totalHours;
+      
+      // Jahresgenaue Berechnung: Nur Tage im Planjahr
+      var dates = getWorkshopDates(w);
+      var yearHrs = 0;
+      if (w.zeiten && w.zeiten.length > 0) {
+        dates.forEach(function(d, i) {
+          if (d.getFullYear() === state.planjahr && w.zeiten[i]) {
+            var vonMin = toMin(w.zeiten[i].von);
+            var bisMin = toMin(w.zeiten[i].bis);
+            if (vonMin !== null && bisMin !== null) {
+              yearHrs += (bisMin - vonMin) / 60;
+            }
+          }
+        });
+      }
+      sumWsYear += yearHrs;
+    });
 
-    // Soll-Ist
-    var dWk=sumWk-(+state.sollWk), dWs=sumWs-(+state.sollWs);
+    // Soll-Ist (jahresgenau)
+    var dWk=sumWkYear-(+state.sollWk), dWs=sumWsYear-(+state.sollWs);
+    g('abgleichJahr').textContent = state.planjahr;
     g('abgleich').innerHTML=
-      row('Wochenkurse', sumWk, state.sollWk, dWk)+
-      row('Workshops', sumWs, state.sollWs, dWs);
+      row('Wochenkurse', sumWkYear, state.sollWk, dWk)+
+      row('Workshops', sumWsYear, state.sollWs, dWs);
 
     // Konflikte (Wochenkurse: gleicher Tag + Zeitüberlappung + gleicher Raum/Dozent)
     var konf=[];
@@ -785,9 +817,9 @@
       ? '<div class="konf">⚠ '+konf.join('<br>⚠ ')+'</div>'
       : '<div class="ok">Keine Raum- oder Dozenten-Konflikte erkannt.</div>';
 
-    // Leiste
-    g('b-wk').innerHTML=nf.format(sumWk)+' / '+nf.format(state.sollWk)+' h '+badge(dWk);
-    g('b-ws').innerHTML=nf.format(sumWs)+' / '+nf.format(state.sollWs)+' h '+badge(dWs);
+    // Leiste (jahresgenau)
+    g('b-wk').innerHTML=nf.format(sumWkYear)+' / '+nf.format(state.sollWk)+' h '+badge(dWk);
+    g('b-ws').innerHTML=nf.format(sumWsYear)+' / '+nf.format(state.sollWs)+' h '+badge(dWs);
     g('b-konf').innerHTML = konf.length? '<span class="neg">'+konf.length+'</span>' : '<span class="pos">0</span>';
   }
   function row(label, ist, soll, d){
