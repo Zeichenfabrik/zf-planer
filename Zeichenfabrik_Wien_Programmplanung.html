@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zeichenfabrik Wien — Programmplanung</title>
+<!--
+  ============================================================================
+  ZEICHENFABRIK WIEN — PROGRAMMPLANUNG (Stundenplan-Entwurf)
+  ============================================================================
+  Eigenständige App, offline, keine Abhängigkeiten. Im Browser öffnen.
+
+  ZWECK: Entwurfstool VOR dem CMS. Aus dem Plansoll (Stunden je Schicht aus dem
+  Standortrechner) einen konkreten Stundenplan formen und prüfen, ob das Soll
+  getroffen wird. Keine Buchung, kein Live-Betrieb.
+
+  LOGIK:
+  • Wochenkurse laufen wöchentlich und setzen automatisch aus an:
+      − gesetzlichen Feiertagen (berechnet, Oster-Algorithmus)
+      − Ferien/Sperrzeiten (editierbare Datumsbereiche, Wien vorbefüllt)
+    Ein ausgesetzter Termin verschiebt den Kurs nach hinten (Sessions bleiben gleich).
+    Pro Kurs überschreibbar: „läuft auch in Ferien" ignoriert die Ferien
+    (gesetzliche Feiertage bleiben gesperrt).
+  • Workshops sind von Sperrzeiten AUSGENOMMEN — sie liegen auf festen Daten.
+  • Soll-Ist-Abgleich je Schicht + einfache Raum-/Dozenten-Konfliktprüfung.
+
+  Ferien sind editierbar, weil die exakten Grenzen (Wochenende davor, schul-
+  autonome Tage) je nach Bedarf abweichen. Quelle der Voreinstellung:
+  Bildungsdirektion Wien, Schuljahre 2025/26 & 2026/27.
+  ============================================================================
+-->
+<style>
+  :root{
+    --paper:#FAFAF8; --ink:#1B1B1A; --muted:#6E6B66; --faint:#9A968F;
+    --line:#E6E3DD; --card:#F1EFEA; --card2:#FBFAF7; --field:#FFFFFF;
+    --accent:#36605E; --pos:#2E6B4F; --neg:#A8443A; --warn:#9A6A1B;
+    --serif:Georgia,"Times New Roman",serif;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --r:10px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#15171A; --ink:#ECEAE5; --muted:#9C988F; --faint:#6E6B66;
+      --line:#2A2D31; --card:#1E2125; --card2:#202327; --field:#26292D;
+      --accent:#63ABA3; --pos:#5FB389; --neg:#DA8B81; --warn:#D9AE6A;
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.5; padding:0 0 86px; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:780px; margin:0 auto; padding:32px 20px 24px;}
+  header{margin-bottom:20px;}
+  h1{font-family:var(--serif); font-weight:600; font-size:26px; letter-spacing:-0.01em; margin:0 0 4px;}
+  .lede{color:var(--muted); font-size:14px; margin:0;}
+
+  .toolbar{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:14px 0 4px; padding:10px 12px; background:var(--card); border-radius:var(--r);}
+  .toolbar label{font-size:12px; color:var(--muted);}
+  select,button{font-family:var(--sans); font-size:13px; color:var(--ink); background:var(--field); border:1px solid var(--line); border-radius:7px; padding:6px 10px; cursor:pointer;}
+  button:hover{border-color:var(--accent);}
+  button.add{background:var(--accent); color:#fff; border-color:var(--accent);}
+  button.del{padding:4px 9px; font-size:12px; color:var(--neg);}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:1px;}
+  select{min-width:130px;}
+
+  .card{background:var(--card); border-radius:var(--r); padding:15px 17px; margin:14px 0;}
+  .card h2{font-family:var(--serif); font-weight:600; font-size:16px; margin:0 0 2px;}
+  .card .sub{font-size:12px; color:var(--faint); margin:0 0 12px;}
+
+  input[type=text],input[type=number],input[type=date],input[type=time]{
+    font-family:var(--sans); font-size:13.5px; background:var(--field); border:1px solid var(--line);
+    border-radius:7px; color:var(--ink); height:34px; padding:0 8px; font-variant-numeric:tabular-nums;}
+  label.fld{display:flex; flex-direction:column; gap:3px; font-size:11.5px; color:var(--muted);}
+  label.chk{display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted);}
+
+  .item{background:var(--card2); border:1px solid var(--line); border-radius:9px; padding:11px 12px; margin-bottom:10px;}
+  .frow{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;}
+  .derived{font-size:12.5px; color:var(--muted); margin-top:9px; padding-top:8px; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;}
+  .derived .warn{color:var(--warn);}
+
+  .soll{display:flex; gap:18px; flex-wrap:wrap;}
+  .fhint{font-size:11.5px; color:var(--faint); line-height:1.7;}
+  .konf{font-size:13px; color:var(--neg); margin-top:4px;}
+  .ok{font-size:13px; color:var(--pos);}
+
+  .bar{position:fixed; left:0; right:0; bottom:0; background:var(--card2); border-top:1px solid var(--line); box-shadow:0 -2px 14px rgba(0,0,0,0.05);}
+  .bar .inner{max-width:780px; margin:0 auto; padding:10px 20px; display:flex; gap:22px; align-items:baseline; flex-wrap:wrap;}
+  .bar .item2{display:flex; flex-direction:column; background:none; border:none; padding:0; margin:0;}
+  .bar .k{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;}
+  .bar .v{font-family:var(--serif); font-size:19px; font-weight:600; font-variant-numeric:tabular-nums;}
+  .pos{color:var(--pos);} .neg{color:var(--neg);} .warnc{color:var(--warn);}
+
+  @media print{ .toolbar,.bar,button{display:none;} body{padding-bottom:0;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Zeichenfabrik Wien — Programmplanung</h1>
+  <p class="lede">Stundenplan-Entwurf · Soll-Ist zum Plansoll · feiertags- und ferienbewusst · läuft offline</p>
+</header>
+
+<div class="toolbar">
+  <label for="scen">Szenario</label>
+  <select id="scen"><option value="">— gespeicherte —</option></select>
+  <button id="btnLoad">Laden</button>
+  <button id="btnSave">Speichern als …</button>
+  <button id="btnDel">Löschen</button>
+  <span style="flex:1"></span>
+  <button id="btnReset">Zurücksetzen</button>
+</div>
+
+<!-- PLANSOLL -->
+<div class="card">
+  <h2>Plansoll (aus dem Standortrechner)</h2>
+  <div class="sub">Zielstunden je Schicht — hier eintragen, was der Rechner vorgibt</div>
+  <div class="soll">
+    <label class="fld" style="min-width:170px;">Wochenkurse Soll (h/Jahr)<input type="number" id="sollWk" value="1000" min="0" step="10"></label>
+    <label class="fld" style="min-width:170px;">Workshops Soll (h/Jahr)<input type="number" id="sollWs" value="532" min="0" step="10"></label>
+  </div>
+</div>
+
+<!-- SPERRZEITEN -->
+<div class="card">
+  <h2>Sperrzeiten (Ferien &amp; Schließzeiten)</h2>
+  <div class="sub">blockieren Wochenkurs-Termine — Grenzen frei editierbar · Workshops sind ausgenommen</div>
+  <div id="sperrList"></div>
+  <button class="add" id="addSperr">+ Sperrzeit hinzufügen</button>
+  <div class="fhint" id="feiertage" style="margin-top:12px;"></div>
+</div>
+
+<!-- WOCHENKURSE -->
+<div class="card">
+  <h2>Wochenkurse</h2>
+  <div class="sub">wöchentlich · setzen an Feiertagen &amp; Ferien aus (verschieben sich nach hinten)</div>
+  <div id="kursList"></div>
+  <button class="add" id="addKurs">+ Kurs hinzufügen</button>
+</div>
+
+<!-- WORKSHOPS -->
+<div class="card">
+  <h2>Workshops</h2>
+  <div class="sub">feste Blocktermine · von Sperrzeiten ausgenommen</div>
+  <div id="wsList"></div>
+  <button class="add" id="addWs">+ Workshop hinzufügen</button>
+</div>
+
+<!-- SOLL-IST & KONFLIKTE -->
+<div class="card" style="background:var(--card2); border:1px solid var(--line);">
+  <h2>Soll-Ist-Abgleich &amp; Konflikte</h2>
+  <div class="sub">&nbsp;</div>
+  <div id="abgleich"></div>
+  <div id="konflikte" style="margin-top:10px;"></div>
+</div>
+
+<p style="font-size:11.5px; color:var(--faint); text-align:center; margin:18px 0 0;">
+  Schulautonome Tage &amp; Fenstertage variieren je Schule — Ferien ggf. gegen den eigenen Kalender abgleichen.<br>
+  Szenarien werden lokal im Browser gespeichert. Datei frei kopier- und erweiterbar.
+</p>
+</div>
+
+<div class="bar"><div class="inner">
+  <div class="item2"><span class="k">Wochenkurse Ist / Soll</span><span class="v" id="b-wk"></span></div>
+  <div class="item2"><span class="k">Workshops Ist / Soll</span><span class="v" id="b-ws"></span></div>
+  <span style="flex:1"></span>
+  <div class="item2"><span class="k">Konflikte</span><span class="v" id="b-konf"></span></div>
+</div></div>
+
+<script>
+"use strict";
+(function(){
+  var WD=['So','Mo','Di','Mi','Do','Fr','Sa']; // getDay() index
+  var nf=new Intl.NumberFormat('de-DE',{maximumFractionDigits:0});
+  function g(id){return document.getElementById(id);}
+  function uid(){ return 'x'+Math.random().toString(36).slice(2,9); }
+
+  // ---- Datums-Helfer ----------------------------------------------------
+  function parseD(s){ if(!s) return null; var p=s.split('-'); if(p.length!==3) return null; return new Date(+p[0],+p[1]-1,+p[2]); }
+  function pad(n){ return (n<10?'0':'')+n; }
+  function fmt(d){ return d?pad(d.getDate())+'.'+pad(d.getMonth()+1)+'.'+d.getFullYear():'—'; }
+  function addDays(d,n){ var x=new Date(d); x.setDate(x.getDate()+n); return x; }
+  function sameDay(a,b){ return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
+
+  // Oster-Algorithmus (Gregorianisch) → gesetzliche Feiertage Österreich
+  function easter(y){
+    var a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),
+        gg=Math.floor((b-f+1)/3),h=(19*a+b-d-gg+15)%30,i=Math.floor(c/4),k=c%4,
+        l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),
+        mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;
+    return new Date(y,mo-1,da);
+  }
+  function feiertage(y){
+    var e=easter(y);
+    return [
+      {n:'Neujahr', d:new Date(y,0,1)}, {n:'Hl. Drei Könige', d:new Date(y,0,6)},
+      {n:'Ostermontag', d:addDays(e,1)}, {n:'Staatsfeiertag', d:new Date(y,4,1)},
+      {n:'Christi Himmelfahrt', d:addDays(e,39)}, {n:'Pfingstmontag', d:addDays(e,50)},
+      {n:'Fronleichnam', d:addDays(e,60)}, {n:'Mariä Himmelfahrt', d:new Date(y,7,15)},
+      {n:'Nationalfeiertag', d:new Date(y,9,26)}, {n:'Allerheiligen', d:new Date(y,10,1)},
+      {n:'Mariä Empfängnis', d:new Date(y,11,8)}, {n:'Christtag', d:new Date(y,11,25)},
+      {n:'Stefanitag', d:new Date(y,11,26)}
+    ];
+  }
+  function isFeiertag(d){
+    var list=feiertage(d.getFullYear());
+    for(var i=0;i<list.length;i++) if(sameDay(d,list[i].d)) return true;
+    return false;
+  }
+  function isInSperr(d){
+    for(var i=0;i<state.sperr.length;i++){
+      var v=parseD(state.sperr[i].von), b=parseD(state.sperr[i].bis);
+      if(v&&b&&d>=v&&d<=b) return true;
+    }
+    return false;
+  }
+  function blockedForCourse(d, inFerien){
+    if(isFeiertag(d)) return true;
+    if(!inFerien && isInSperr(d)) return true;
+    return false;
+  }
+  // Sitzungstermine erzeugen: ausgesetzte Wochen werden übersprungen (Kurs verlängert sich)
+  function genDates(startStr, weekday, n, inFerien){
+    var d=parseD(startStr); if(!d||!n) return [];
+    var guard=0; while(d.getDay()!==weekday && guard<7){ d=addDays(d,1); guard++; }
+    var out=[]; guard=0;
+    while(out.length<n && guard<520){
+      if(!blockedForCourse(d, inFerien)) out.push(new Date(d));
+      d=addDays(d,7); guard++;
+    }
+    return out;
+  }
+  function toMin(t){ if(!t) return null; var p=t.split(':'); return (+p[0])*60+(+p[1]); }
+
+  // ---- State ------------------------------------------------------------
+  function freshState(){
+    return {
+      sollWk:1000, sollWs:532,
+      sperr:[
+        {id:uid(),name:'Semesterferien 2026', von:'2026-01-31', bis:'2026-02-08'},
+        {id:uid(),name:'Osterferien 2026',    von:'2026-03-28', bis:'2026-04-06'},
+        {id:uid(),name:'Pfingstferien 2026',  von:'2026-05-23', bis:'2026-05-25'},
+        {id:uid(),name:'Sommerferien 2026',   von:'2026-07-04', bis:'2026-09-06'},
+        {id:uid(),name:'Herbstferien 2026',   von:'2026-10-27', bis:'2026-10-31'},
+        {id:uid(),name:'Weihnachtsferien 26/27', von:'2026-12-24', bis:'2027-01-06'},
+        {id:uid(),name:'Semesterferien 2027', von:'2027-01-30', bis:'2027-02-07'},
+        {id:uid(),name:'Osterferien 2027',    von:'2027-03-20', bis:'2027-03-29'},
+        {id:uid(),name:'Pfingstferien 2027',  von:'2027-05-15', bis:'2027-05-17'},
+        {id:uid(),name:'Sommerferien 2027',   von:'2027-07-03', bis:'2027-09-05'}
+      ],
+      kurse:[
+        {id:uid(),titel:'Aktzeichnen Grundkurs', dozent:'', tag:3, zeit:'18:00', start:'2026-03-04', sessions:7, std:3, raum:'1', inFerien:false}
+      ],
+      workshops:[
+        {id:uid(),titel:'Wochenend-Workshop Aquarell', dozent:'', datum:'2026-04-18', stunden:12, raum:'2'}
+      ]
+    };
+  }
+  var state=freshState();
+
+  // ---- Rendering --------------------------------------------------------
+  function esc(s){ return (s||'').replace(/"/g,'&quot;'); }
+
+  function renderSperr(){
+    var h='';
+    state.sperr.forEach(function(s){
+      h+='<div class="item"><div class="frow">'+
+        '<label class="fld" style="flex:2; min-width:160px;">Bezeichnung<input type="text" data-t="sperr" data-id="'+s.id+'" data-f="name" value="'+esc(s.name)+'"></label>'+
+        '<label class="fld">von<input type="date" data-t="sperr" data-id="'+s.id+'" data-f="von" value="'+s.von+'"></label>'+
+        '<label class="fld">bis<input type="date" data-t="sperr" data-id="'+s.id+'" data-f="bis" value="'+s.bis+'"></label>'+
+        '<button class="del" data-del="sperr" data-id="'+s.id+'">Entfernen</button>'+
+        '</div></div>';
+    });
+    g('sperrList').innerHTML=h;
+  }
+
+  function renderKurse(){
+    var h='';
+    state.kurse.forEach(function(k){
+      var opts=''; for(var w=1;w<=6;w++){ opts+='<option value="'+w+'"'+(k.tag==w?' selected':'')+'>'+WD[w]+'</option>'; }
+      h+='<div class="item">'+
+        '<div class="frow">'+
+          '<label class="fld" style="flex:2; min-width:150px;">Titel<input type="text" data-t="kurse" data-id="'+k.id+'" data-f="titel" value="'+esc(k.titel)+'"></label>'+
+          '<label class="fld" style="flex:1; min-width:120px;">Dozent:in<input type="text" data-t="kurse" data-id="'+k.id+'" data-f="dozent" value="'+esc(k.dozent)+'"></label>'+
+        '</div>'+
+        '<div class="frow" style="margin-top:8px;">'+
+          '<label class="fld">Tag<select data-t="kurse" data-id="'+k.id+'" data-f="tag">'+opts+'</select></label>'+
+          '<label class="fld">Uhrzeit<input type="time" data-t="kurse" data-id="'+k.id+'" data-f="zeit" value="'+(k.zeit||'')+'" style="width:96px;"></label>'+
+          '<label class="fld">Start<input type="date" data-t="kurse" data-id="'+k.id+'" data-f="start" value="'+k.start+'"></label>'+
+          '<label class="fld">Termine<input type="number" data-t="kurse" data-id="'+k.id+'" data-f="sessions" value="'+k.sessions+'" min="1" max="30" style="width:74px;"></label>'+
+          '<label class="fld">Std/Termin<input type="number" data-t="kurse" data-id="'+k.id+'" data-f="std" value="'+k.std+'" min="0.5" max="8" step="0.5" style="width:84px;"></label>'+
+          '<label class="fld">Raum<input type="text" data-t="kurse" data-id="'+k.id+'" data-f="raum" value="'+esc(k.raum)+'" style="width:70px;"></label>'+
+        '</div>'+
+        '<div class="derived">'+
+          '<label class="chk"><input type="checkbox" data-t="kurse" data-id="'+k.id+'" data-f="inFerien"'+(k.inFerien?' checked':'')+'> läuft auch in Ferien</label>'+
+          '<span id="d-'+k.id+'"></span>'+
+          '<button class="del" data-del="kurse" data-id="'+k.id+'">Entfernen</button>'+
+        '</div>'+
+        '</div>';
+    });
+    g('kursList').innerHTML=h;
+  }
+
+  function renderWs(){
+    var h='';
+    state.workshops.forEach(function(w){
+      h+='<div class="item"><div class="frow">'+
+        '<label class="fld" style="flex:2; min-width:150px;">Titel<input type="text" data-t="workshops" data-id="'+w.id+'" data-f="titel" value="'+esc(w.titel)+'"></label>'+
+        '<label class="fld" style="flex:1; min-width:110px;">Dozent:in<input type="text" data-t="workshops" data-id="'+w.id+'" data-f="dozent" value="'+esc(w.dozent)+'"></label>'+
+        '<label class="fld">Datum<input type="date" data-t="workshops" data-id="'+w.id+'" data-f="datum" value="'+w.datum+'"></label>'+
+        '<label class="fld">Stunden<input type="number" data-t="workshops" data-id="'+w.id+'" data-f="stunden" value="'+w.stunden+'" min="0" step="1" style="width:80px;"></label>'+
+        '<label class="fld">Raum<input type="text" data-t="workshops" data-id="'+w.id+'" data-f="raum" value="'+esc(w.raum)+'" style="width:70px;"></label>'+
+        '<button class="del" data-del="workshops" data-id="'+w.id+'">Entfernen</button>'+
+        '</div></div>';
+    });
+    g('wsList').innerHTML=h;
+  }
+
+  function renderFeiertage(){
+    var years={}; 
+    state.sperr.forEach(function(s){ var v=parseD(s.von); if(v) years[v.getFullYear()]=1; });
+    state.kurse.forEach(function(k){ var v=parseD(k.start); if(v){years[v.getFullYear()]=1; years[v.getFullYear()+1]=1;} });
+    var ys=Object.keys(years).sort();
+    if(!ys.length){ g('feiertage').textContent=''; return; }
+    var parts=['Automatisch gesperrte gesetzliche Feiertage:'];
+    ys.forEach(function(y){
+      var names=feiertage(+y).map(function(f){ return f.n+' '+fmt(f.d); });
+      parts.push('<b>'+y+':</b> '+names.join(' · '));
+    });
+    g('feiertage').innerHTML=parts.join('<br>');
+  }
+
+  function renderAll(){ renderSperr(); renderKurse(); renderWs(); renderFeiertage(); recompute(); }
+
+  // ---- Berechnung (ohne Neuaufbau der Eingaben) -------------------------
+  function recompute(){
+    var sumWk=0;
+    state.kurse.forEach(function(k){
+      var dates=genDates(k.start, +k.tag, +k.sessions, !!k.inFerien);
+      var hrs=(+k.sessions)*(+k.std);
+      sumWk+=hrs;
+      var span=el('d-'+k.id); if(!el('d-'+k.id)) return;
+      var info='';
+      if(dates.length){
+        var first=dates[0], last=dates[dates.length-1];
+        var weeks=Math.round((last-first)/(7*86400000))+1;
+        var verschoben=weeks-dates.length;
+        info=WD[+k.tag]+' · Ende '+fmt(last)+' · '+nf.format(hrs)+' h';
+        if(verschoben>0) info+=' · <span class="warn">'+verschoben+' Wo. verschoben</span>';
+      } else { info='<span class="warn">Startdatum prüfen</span>'; }
+      el('d-'+k.id).innerHTML=info;
+    });
+    var sumWs=0; state.workshops.forEach(function(w){ sumWs+=(+w.stunden)||0; });
+
+    // Soll-Ist
+    var dWk=sumWk-(+state.sollWk), dWs=sumWs-(+state.sollWs);
+    g('abgleich').innerHTML=
+      row('Wochenkurse', sumWk, state.sollWk, dWk)+
+      row('Workshops', sumWs, state.sollWs, dWs);
+
+    // Konflikte (Wochenkurse: gleicher Tag + Zeitüberlappung + gleicher Raum/Dozent)
+    var konf=[];
+    var ks=state.kurse;
+    for(var i=0;i<ks.length;i++){ for(var j=i+1;j<ks.length;j++){
+      var a=ks[i], b=ks[j];
+      if(+a.tag!==+b.tag) continue;
+      var as=toMin(a.zeit), ae=as+(+a.std)*60, bs=toMin(b.zeit), be=bs+(+b.std)*60;
+      if(as===null||bs===null) continue;
+      if(as<be && bs<ae){
+        if(a.raum && b.raum && a.raum.trim().toLowerCase()===b.raum.trim().toLowerCase())
+          konf.push('Raum '+a.raum+': „'+(a.titel||'?')+'" und „'+(b.titel||'?')+'" überschneiden sich ('+WD[+a.tag]+' '+a.zeit+')');
+        if(a.dozent && b.dozent && a.dozent.trim().toLowerCase()===b.dozent.trim().toLowerCase())
+          konf.push(a.dozent+': „'+(a.titel||'?')+'" und „'+(b.titel||'?')+'" gleichzeitig ('+WD[+a.tag]+' '+a.zeit+')');
+      }
+    }}
+    g('konflikte').innerHTML = konf.length
+      ? '<div class="konf">⚠ '+konf.join('<br>⚠ ')+'</div>'
+      : '<div class="ok">Keine Raum- oder Dozenten-Konflikte erkannt.</div>';
+
+    // Leiste
+    g('b-wk').innerHTML=nf.format(sumWk)+' / '+nf.format(state.sollWk)+' h '+badge(dWk);
+    g('b-ws').innerHTML=nf.format(sumWs)+' / '+nf.format(state.sollWs)+' h '+badge(dWs);
+    g('b-konf').innerHTML = konf.length? '<span class="neg">'+konf.length+'</span>' : '<span class="pos">0</span>';
+  }
+  function el(id){ return document.getElementById(id); }
+  function row(label, ist, soll, d){
+    var cls = Math.abs(d) <= Math.max(5, soll*0.03) ? 'pos' : (d<0?'warnc':'pos');
+    return '<div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:5px;">'+
+      '<span>'+label+'</span><span style="font-variant-numeric:tabular-nums;">geplant '+nf.format(ist)+
+      ' h · Soll '+nf.format(soll)+' h · <b class="'+cls+'">'+(d>=0?'+':'')+nf.format(d)+' h</b></span></div>';
+  }
+  function badge(d){
+    if(Math.abs(d)<=5) return '<span class="pos">✓</span>';
+    return '<span class="'+(d<0?'warnc':'pos')+'">'+(d>=0?'+':'')+nf.format(d)+'</span>';
+  }
+
+  // ---- Eingaben (Delegation, kein Fokusverlust) -------------------------
+  document.addEventListener('input', onEdit);
+  document.addEventListener('change', onEdit);
+  function onEdit(e){
+    var t=e.target;
+    if(t.id==='sollWk'){ state.sollWk=+t.value||0; recompute(); return; }
+    if(t.id==='sollWs'){ state.sollWs=+t.value||0; recompute(); return; }
+    var tbl=t.getAttribute&&t.getAttribute('data-t'), id=t.getAttribute&&t.getAttribute('data-id'), f=t.getAttribute&&t.getAttribute('data-f');
+    if(!tbl||!id||!f) return;
+    var rec=state[tbl].filter(function(r){return r.id===id;})[0]; if(!rec) return;
+    rec[f] = (t.type==='checkbox')? t.checked : t.value;
+    recompute();
+    if(f==='von'||f==='bis'||f==='start') renderFeiertage();
+  }
+  // Hinzufügen / Entfernen
+  g('addSperr').addEventListener('click', function(){ state.sperr.push({id:uid(),name:'Neue Sperrzeit',von:'',bis:''}); renderSperr(); });
+  g('addKurs').addEventListener('click', function(){ state.kurse.push({id:uid(),titel:'Neuer Kurs',dozent:'',tag:3,zeit:'18:00',start:'',sessions:7,std:3,raum:'',inFerien:false}); renderKurse(); recompute(); });
+  g('addWs').addEventListener('click', function(){ state.workshops.push({id:uid(),titel:'Neuer Workshop',dozent:'',datum:'',stunden:12,raum:''}); renderWs(); recompute(); });
+  document.addEventListener('click', function(e){
+    var del=e.target.getAttribute&&e.target.getAttribute('data-del'); if(!del) return;
+    var id=e.target.getAttribute('data-id');
+    state[del]=state[del].filter(function(r){return r.id!==id;});
+    if(del==='sperr'){ renderSperr(); renderFeiertage(); recompute(); }
+    else if(del==='kurse'){ renderKurse(); recompute(); }
+    else { renderWs(); recompute(); }
+  });
+
+  // ---- Szenarien --------------------------------------------------------
+  var KEY='zf_wien_programm_v1';
+  function store(){ try{ return JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ return {}; } }
+  function saveStore(o){ try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(e){} }
+  function refreshList(sel){
+    var o=store(), s=g('scen'); s.innerHTML='<option value="">— gespeicherte —</option>';
+    Object.keys(o).sort().forEach(function(n){ var op=document.createElement('option'); op.value=n; op.textContent=n; if(n===sel)op.selected=true; s.appendChild(op); });
+  }
+  g('btnSave').addEventListener('click', function(){
+    var name=prompt('Szenario-Name (z. B. „SS 2026 Entwurf"):'); if(!name) return;
+    var o=store(); o[name]=JSON.parse(JSON.stringify(state)); saveStore(o); refreshList(name);
+  });
+  g('btnLoad').addEventListener('click', function(){
+    var name=g('scen').value; if(!name) return; var o=store(); if(!o[name]) return;
+    state=JSON.parse(JSON.stringify(o[name]));
+    g('sollWk').value=state.sollWk; g('sollWs').value=state.sollWs;
+    renderAll();
+  });
+  g('btnDel').addEventListener('click', function(){
+    var name=g('scen').value; if(!name) return; if(!confirm('Szenario „'+name+'" löschen?')) return;
+    var o=store(); delete o[name]; saveStore(o); refreshList('');
+  });
+  g('btnReset').addEventListener('click', function(){
+    if(!confirm('Auf Startwerte zurücksetzen? Nicht gespeicherte Eingaben gehen verloren.')) return;
+    state=freshState(); g('sollWk').value=state.sollWk; g('sollWs').value=state.sollWs; renderAll();
+  });
+
+  refreshList('');
+  renderAll();
+})();
+</script>
+</body>
+</html>

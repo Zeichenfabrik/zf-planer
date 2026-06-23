@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zeichenfabrik Graz — Standortrechner</title>
+<!--
+  ============================================================================
+  ZEICHENFABRIK GRAZ — STANDORTRECHNER  (eigenständige App, v1)
+  ============================================================================
+  Läuft komplett offline. Einfach im Browser öffnen (Doppelklick).
+  Keine Server, keine Abhängigkeiten, keine Internetverbindung nötig.
+
+  MODELL (Pilotjahr, Nettowerte; USt 20 % ist herausgerechnet):
+    Kursschichten (1, 2a, 2b):
+      realisierte Std = Planstunden × Realisierung
+      Umsatz netto    = realisierte Std × Ø-TN × 15 €
+      Fremdleistung   = realisierte Std × (48 € Honorar + Material/Modell €/Std)
+      Deckungsbeitrag = Umsatz − Fremdleistung
+    Nachmittag (Eventbetrieb):
+      Umsatz netto    = Sessions/Wo × Plätze × Walk-in × Preis(netto) × Wochen
+      Fremdleistung   = Gasthonorar/Woche × Wochen  +  Material/Kopf × belegte Plätze
+    Teamevents (B2B):
+      Umsatz netto    = Events × Ø-TN × Preis(netto)
+      Fremdleistung   = Events × (Honorar/Event + Ø-TN × Material/Kopf)
+    Standortweit:
+      Beteiligung     = 8 % auf den GESAMT-Nettoumsatz aller Schichten
+      Vor Miete       = Σ Deckungsbeiträge − Fixum − Beteiligung − Werbung − Betriebskosten
+      Break-even-Miete = Vor Miete ÷ 12
+
+  ----------------------------------------------------------------------------
+  ERWEITERN (z. B. weitere Faktoren später ergänzen):
+    • Neue Kursschicht: HTML-Card kopieren, IDs eindeutig vergeben, in calc()
+      eine courseLayer(...)-Zeile ergänzen und die IDs in PERSIST_IDS eintragen.
+    • Teamevents ist bereits angelegt (Standard 0 Events → kein Beitrag). Einfach
+      Events/Jahr > 0 setzen, die Schicht rechnet sofort mit.
+    • Mehrjahresansicht: in calc() pro Jahr unterschiedliche Realisierungsquoten
+      ansetzen und die Ergebnisse nebeneinander rendern.
+  ============================================================================
+-->
+<style>
+  :root{
+    --paper:#FAFAF8; --ink:#1B1B1A; --muted:#6E6B66; --faint:#9A968F;
+    --line:#E6E3DD; --card:#F1EFEA; --card2:#FBFAF7; --field:#FFFFFF;
+    --accent:#36605E; --pos:#2E6B4F; --neg:#A8443A;
+    --serif:Georgia,"Times New Roman",serif;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --r:10px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#15171A; --ink:#ECEAE5; --muted:#9C988F; --faint:#6E6B66;
+      --line:#2A2D31; --card:#1E2125; --card2:#202327; --field:#26292D;
+      --accent:#63ABA3; --pos:#5FB389; --neg:#DA8B81;
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    background:var(--paper); color:var(--ink); font-family:var(--sans);
+    font-size:15px; line-height:1.5; padding:0 0 92px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:740px; margin:0 auto; padding:32px 20px 24px;}
+  header{margin-bottom:22px;}
+  h1{font-family:var(--serif); font-weight:600; font-size:27px; letter-spacing:-0.01em; margin:0 0 4px;}
+  .lede{color:var(--muted); font-size:14px; margin:0;}
+
+  .toolbar{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:16px 0 4px; padding:10px 12px; background:var(--card); border-radius:var(--r);}
+  .toolbar label{font-size:12px; color:var(--muted);}
+  select,button{font-family:var(--sans); font-size:13px; color:var(--ink); background:var(--field); border:1px solid var(--line); border-radius:7px; padding:6px 10px; cursor:pointer;}
+  button:hover{border-color:var(--accent);}
+  button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent); outline-offset:1px;}
+  select{min-width:150px;}
+
+  .card{background:var(--card); border-radius:var(--r); padding:15px 17px; margin:14px 0;}
+  .card h2{font-family:var(--serif); font-weight:600; font-size:16px; margin:0;}
+  .card .sub{font-size:12px; color:var(--faint); margin:1px 0 12px;}
+
+  .sld{display:flex; align-items:center; gap:12px; margin-bottom:9px;}
+  .sld > label{font-size:13px; color:var(--muted); min-width:150px;}
+  .sld input[type=range]{flex:1; accent-color:var(--accent);}
+  .sld .val{font-size:13px; font-weight:600; min-width:60px; text-align:right; font-variant-numeric:tabular-nums;}
+
+  .nrow{display:flex; flex-wrap:wrap; gap:18px; margin:10px 0 4px;}
+  .nrow label{display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--muted);}
+  input[type=number]{font-family:var(--sans); font-size:14px; text-align:center; width:84px; height:34px; background:var(--field); border:1px solid var(--line); border-radius:7px; color:var(--ink); font-variant-numeric:tabular-nums;}
+
+  .ftr{margin-top:11px; padding-top:10px; border-top:1px solid var(--line);}
+  .conv{font-size:11.5px; color:var(--faint); margin-bottom:7px;}
+  .brk{display:flex; justify-content:space-between; font-size:13px; color:var(--muted); margin-bottom:3px; font-variant-numeric:tabular-nums;}
+  .dbline{display:flex; justify-content:space-between; align-items:baseline; margin-top:5px;}
+  .dbline .lab{font-size:13px; font-weight:600; color:var(--ink);}
+  .db{font-family:var(--serif); font-size:20px; font-weight:600; font-variant-numeric:tabular-nums;}
+  .q{font-size:12px; color:var(--faint); margin-left:4px;}
+
+  .total{background:var(--card2); border:1px solid var(--line);}
+  .sumrow{display:flex; justify-content:space-between; font-size:13.5px; margin-bottom:4px; font-variant-numeric:tabular-nums;}
+  .sumrow.strong{font-weight:600; color:var(--ink);}
+  .note{font-size:11.5px; color:var(--faint); margin-top:3px;}
+  .rentbox{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:12px; padding-top:12px; border-top:1px solid var(--line);}
+  .rentbox label{font-size:13px; color:var(--muted);}
+  .hint{font-size:11.5px; color:var(--faint);}
+
+  .pos{color:var(--pos);} .neg{color:var(--neg);}
+
+  /* fixe Ergebnisleiste — immer im Blick */
+  .bar{position:fixed; left:0; right:0; bottom:0; background:var(--card2); border-top:1px solid var(--line); box-shadow:0 -2px 14px rgba(0,0,0,0.05);}
+  .bar .inner{max-width:740px; margin:0 auto; padding:11px 20px; display:flex; gap:22px; align-items:baseline; flex-wrap:wrap;}
+  .bar .item{display:flex; flex-direction:column;}
+  .bar .item .k{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;}
+  .bar .item .v{font-family:var(--serif); font-size:21px; font-weight:600; font-variant-numeric:tabular-nums;}
+  .bar .spacer{flex:1;}
+
+  @media (max-width:560px){
+    .sld > label{min-width:110px;}
+    .bar .inner{gap:14px;}
+    .bar .item .v{font-size:18px;}
+  }
+  /* Mehrjahres-Projektion */
+  .proj{display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; gap:5px 10px; min-width:470px; align-items:center;}
+  .proj .ph{font-size:12px; font-weight:600; color:var(--muted); text-align:right; padding-bottom:5px; border-bottom:1px solid var(--line);}
+  .proj .ph.first{border:none;}
+  .proj .pl{font-size:13px; color:var(--muted);}
+  .proj .pl.strong{font-weight:600; color:var(--ink);}
+  .proj .pi{text-align:right;}
+  .proj .pi input{width:80px;}
+  .proj .pc{font-size:13px; text-align:right; color:var(--ink); font-variant-numeric:tabular-nums;}
+  .proj .pc.dim{color:var(--faint); font-size:12px;}
+  .proj .pv{font-family:var(--serif); font-size:17px; font-weight:600; text-align:right; font-variant-numeric:tabular-nums;}
+  .proj .sep{grid-column:1/-1; height:1px; background:var(--line); margin:3px 0;}
+  .cumrow{margin-top:12px; padding-top:11px; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:baseline;}
+
+  @media print{
+    .toolbar,.bar{display:none;} body{padding-bottom:0;}
+    .sld input[type=range]{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Zeichenfabrik Graz — Standortrechner</h1>
+  <p class="lede">Pilotjahr-Modell · alle Werte netto (USt 20 % herausgerechnet) · läuft offline</p>
+</header>
+
+<div class="toolbar">
+  <label for="scen">Szenario</label>
+  <select id="scen"><option value="">— gespeicherte —</option></select>
+  <button id="btnLoad">Laden</button>
+  <button id="btnSave">Speichern als …</button>
+  <button id="btnDel">Löschen</button>
+  <span style="flex:1"></span>
+  <button id="btnReset">Zurücksetzen</button>
+</div>
+
+<!-- 1 WOCHENKURSE -->
+<div class="card">
+  <h2>1 · Wochenkurse (Abend, ggf. Vormittag)</h2>
+  <div class="sub">vorgebucht · Portier-Zugang · keine Betreuung</div>
+  <div class="sld"><label>Planstunden/Jahr</label><input type="range" min="0" max="840" step="21" value="420" id="wkPs"><span class="val" id="wkPs-o"></span></div>
+  <div class="sld"><label>Realisierung</label><input type="range" min="20" max="90" step="1" value="50" id="wkR"><span class="val" id="wkR-o"></span></div>
+  <div class="nrow">
+    <label>Ø-TN<input type="number" id="wkTn" value="7" min="4" max="10" step="0.5"></label>
+    <label>Termine<input type="number" id="wkTerm" value="7" min="1" max="14" step="1"></label>
+    <label>Std/Termin<input type="number" id="wkSh" value="3" min="1" max="5" step="0.5"></label>
+  </div>
+  <div class="ftr">
+    <div class="conv" id="wk-conv"></div>
+    <div class="brk"><span>Umsatz netto</span><span id="wk-ums"></span></div>
+    <div class="brk"><span>− Fremdleistung (Honorar + Material)</span><span id="wk-fr"></span></div>
+    <div class="dbline"><span class="lab">Deckungsbeitrag</span><span><span class="db" id="wk-db"></span><span class="q" id="wk-q"></span></span></div>
+  </div>
+</div>
+
+<!-- 2a WORKSHOPS WE -->
+<div class="card">
+  <h2>2a · Workshops Wochenenden</h2>
+  <div class="sub">Wiener Maßstab · Ø 12 Std/Workshop</div>
+  <div class="sld"><label>Planstunden/Jahr</label><input type="range" min="0" max="600" step="12" value="372" id="wePs"><span class="val" id="wePs-o"></span></div>
+  <div class="sld"><label>Realisierung</label><input type="range" min="20" max="90" step="1" value="50" id="weR"><span class="val" id="weR-o"></span></div>
+  <div class="nrow">
+    <label>Ø-TN<input type="number" id="weTn" value="7" min="4" max="12" step="0.5"></label>
+    <label>Std/Workshop<input type="number" id="weH" value="12" min="3" max="30" step="1"></label>
+  </div>
+  <div class="ftr">
+    <div class="conv" id="we-conv"></div>
+    <div class="brk"><span>Umsatz netto</span><span id="we-ums"></span></div>
+    <div class="brk"><span>− Fremdleistung (Honorar + Material)</span><span id="we-fr"></span></div>
+    <div class="dbline"><span class="lab">Deckungsbeitrag</span><span><span class="db" id="we-db"></span><span class="q" id="we-q"></span></span></div>
+  </div>
+</div>
+
+<!-- 2b WORKSHOPS FERIEN -->
+<div class="card">
+  <h2>2b · Workshops Hauptferien (Juli/August)</h2>
+  <div class="sub">länger · Ø 15 Std/Workshop</div>
+  <div class="sld"><label>Planstunden/Jahr</label><input type="range" min="0" max="360" step="15" value="150" id="fePs"><span class="val" id="fePs-o"></span></div>
+  <div class="sld"><label>Realisierung</label><input type="range" min="20" max="90" step="1" value="50" id="feR"><span class="val" id="feR-o"></span></div>
+  <div class="nrow">
+    <label>Ø-TN<input type="number" id="feTn" value="7" min="4" max="12" step="0.5"></label>
+    <label>Std/Workshop<input type="number" id="feH" value="15" min="3" max="40" step="1"></label>
+  </div>
+  <div class="ftr">
+    <div class="conv" id="fe-conv"></div>
+    <div class="brk"><span>Umsatz netto</span><span id="fe-ums"></span></div>
+    <div class="brk"><span>− Fremdleistung (Honorar + Material)</span><span id="fe-fr"></span></div>
+    <div class="dbline"><span class="lab">Deckungsbeitrag</span><span><span class="db" id="fe-db"></span><span class="q" id="fe-q"></span></span></div>
+  </div>
+</div>
+
+<!-- 3 NACHMITTAG -->
+<div class="card">
+  <h2>3 · Nachmittag Mo–Fr — Walk-in-Eventbetrieb</h2>
+  <div class="sub">Kassa von Standortleitung gedeckt · keine Aushilfe</div>
+  <div class="sld"><label>Platz-Auslastung</label><input type="range" min="20" max="100" step="1" value="50" id="nmWalk"><span class="val" id="nmWalk-o"></span></div>
+  <div class="sld"><label>Preis/Kopf (netto)</label><input type="range" min="20" max="100" step="1" value="42" id="nmPrice"><span class="val" id="nmPrice-o"></span></div>
+  <div class="sld"><label>Gastkünstler/Woche</label><input type="range" min="0" max="2500" step="50" value="1000" id="nmGuest"><span class="val" id="nmGuest-o"></span></div>
+  <div class="nrow">
+    <label>Sess./Wo.<input type="number" id="nmSess" value="5" min="0" max="10" step="1"></label>
+    <label>Wochen/J.<input type="number" id="nmWeeks" value="25" min="0" max="48" step="1"></label>
+    <label>Plätze<input type="number" id="nmCap" value="15" min="0" max="25" step="1"></label>
+    <label>Mat./Kopf €<input type="number" id="nmMat" value="8" min="0" max="40" step="1"></label>
+  </div>
+  <div class="ftr">
+    <div class="conv">additiv ab Walk-in <span id="nm-be" style="font-weight:600;color:var(--ink)"></span></div>
+    <div class="brk"><span>Umsatz netto</span><span id="nm-ums"></span></div>
+    <div class="brk"><span>− Fremdleistung (Gast + Material)</span><span id="nm-fr"></span></div>
+    <div class="dbline"><span class="lab">Deckungsbeitrag</span><span><span class="db" id="nm-db"></span><span class="q" id="nm-q"></span></span></div>
+  </div>
+</div>
+
+<!-- 4 TEAMEVENTS (B2B) — Standard 0 Events; einfach Events/Jahr setzen -->
+<div class="card">
+  <h2>4 · Teamevents (B2B)</h2>
+  <div class="sub">hochmargig · Standard 0 — Events/Jahr setzen, um zu rechnen</div>
+  <div class="nrow">
+    <label>Events/Jahr<input type="number" id="teEv" value="0" min="0" max="200" step="1"></label>
+    <label>Ø-TN/Event<input type="number" id="teTn" value="12" min="1" max="40" step="1"></label>
+    <label>Preis/Kopf netto<input type="number" id="tePrice" value="75" min="0" max="350" step="5"></label>
+    <label>Honorar/Event<input type="number" id="teHon" value="400" min="0" max="3000" step="25"></label>
+    <label>Mat./Kopf €<input type="number" id="teMat" value="15" min="0" max="80" step="1"></label>
+  </div>
+  <div class="ftr">
+    <div class="conv" id="te-conv"></div>
+    <div class="brk"><span>Umsatz netto</span><span id="te-ums"></span></div>
+    <div class="brk"><span>− Fremdleistung (Honorar + Material)</span><span id="te-fr"></span></div>
+    <div class="dbline"><span class="lab">Deckungsbeitrag</span><span><span class="db" id="te-db"></span><span class="q" id="te-q"></span></span></div>
+  </div>
+</div>
+
+<!-- GESAMT -->
+<div class="card total">
+  <h2>Standortweite Kosten &amp; Gesamtrechnung</h2>
+  <div class="sub">&nbsp;</div>
+  <div class="sld"><label>Standortleitung Fixum/J.</label><input type="range" min="8000" max="32000" step="250" value="18000" id="fx"><span class="val" id="fx-o"></span></div>
+  <div class="sld"><label>Werbung / Verwaltung</label><input type="range" min="0" max="14000" step="100" value="3500" id="wv"><span class="val" id="wv-o"></span></div>
+  <div class="sld"><label>Betriebskosten/J. (Energie, Reinigung, Internet)</label><input type="range" min="0" max="20000" step="250" value="0" id="betrieb"><span class="val" id="betrieb-o"></span></div>
+  <div class="nrow">
+    <label>Material/Modell €/Std (Kurse)<input type="number" id="matKurse" value="0" min="0" max="20" step="0.5"></label>
+  </div>
+
+  <div style="background:var(--card); border-radius:8px; padding:11px 13px; margin:13px 0 0;">
+    <div class="sumrow strong"><span>Summe Deckungsbeiträge (alle Schichten)</span><span id="g-sumdb"></span></div>
+    <div class="sumrow"><span>− Standortleitung gesamt (Fixum + 8 % Beteiligung)</span><span id="g-lc"></span></div>
+    <div class="sumrow"><span>− Werbung / Verwaltung</span><span id="g-wv"></span></div>
+    <div class="sumrow"><span>− Betriebskosten</span><span id="g-be"></span></div>
+    <div class="note" id="g-lcsub"></div>
+  </div>
+
+  <div class="rentbox">
+    <label>Miete €/Monat</label>
+    <input type="number" id="rent" value="1200" min="0" step="50" style="width:104px;">
+    <span class="hint">ableiten:</span>
+    <input type="number" id="m2" value="140" min="0" step="5" style="width:72px;"><span class="hint">m² ×</span>
+    <input type="number" id="ppm" value="8.5" min="0" step="0.5" style="width:68px;"><span class="hint">€/m²</span>
+    <button id="btnTake">übernehmen</button>
+  </div>
+</div>
+
+<!-- MEHRJAHRES-PROJEKTION -->
+<div class="card">
+  <h2>Mehrjahres-Projektion (Jahr 1 → 3)</h2>
+  <div class="sub">Struktur, Ø-TN und Preise stammen aus den Karten oben (konstant). Auslastung, Fixum und Miete steuerst du je Jahr — so bildest du die Anlaufkurve und die Mietstaffel ab.</div>
+  <div style="overflow-x:auto;">
+  <div class="proj">
+    <div class="ph first"></div><div class="ph">Jahr 1</div><div class="ph">Jahr 2</div><div class="ph">Jahr 3</div>
+
+    <div class="pl">Kurs-Auslastung %</div>
+    <div class="pi"><input type="number" id="y1Util" value="50" min="0" max="100" step="1"></div>
+    <div class="pi"><input type="number" id="y2Util" value="65" min="0" max="100" step="1"></div>
+    <div class="pi"><input type="number" id="y3Util" value="78" min="0" max="100" step="1"></div>
+
+    <div class="pl">Nachmittag Walk-in %</div>
+    <div class="pi"><input type="number" id="y1Walk" value="40" min="0" max="100" step="1"></div>
+    <div class="pi"><input type="number" id="y2Walk" value="55" min="0" max="100" step="1"></div>
+    <div class="pi"><input type="number" id="y3Walk" value="70" min="0" max="100" step="1"></div>
+
+    <div class="pl">Teamevents/Jahr</div>
+    <div class="pi"><input type="number" id="y1Ev" value="0" min="0" max="200" step="1"></div>
+    <div class="pi"><input type="number" id="y2Ev" value="0" min="0" max="200" step="1"></div>
+    <div class="pi"><input type="number" id="y3Ev" value="0" min="0" max="200" step="1"></div>
+
+    <div class="pl">Standortleitung Fixum €</div>
+    <div class="pi"><input type="number" id="y1Fix" value="18000" min="0" step="250"></div>
+    <div class="pi"><input type="number" id="y2Fix" value="20098" min="0" step="250"></div>
+    <div class="pi"><input type="number" id="y3Fix" value="22331" min="0" step="250"></div>
+
+    <div class="pl">Miete €/Monat (Staffel)</div>
+    <div class="pi"><input type="number" id="y1Rent" value="0" min="0" step="50"></div>
+    <div class="pi"><input type="number" id="y2Rent" value="800" min="0" step="50"></div>
+    <div class="pi"><input type="number" id="y3Rent" value="1200" min="0" step="50"></div>
+
+    <div class="sep"></div>
+
+    <div class="pl">Nettoumsatz</div>
+    <div class="pc" id="p1-net"></div><div class="pc" id="p2-net"></div><div class="pc" id="p3-net"></div>
+    <div class="pl">Σ Deckungsbeitrag</div>
+    <div class="pc" id="p1-db"></div><div class="pc" id="p2-db"></div><div class="pc" id="p3-db"></div>
+    <div class="pl">− Standortleitung (Fixum + 8 %)</div>
+    <div class="pc" id="p1-lc"></div><div class="pc" id="p2-lc"></div><div class="pc" id="p3-lc"></div>
+    <div class="pl">− Werbung / Verwaltung</div>
+    <div class="pc" id="p1-wv"></div><div class="pc" id="p2-wv"></div><div class="pc" id="p3-wv"></div>
+    <div class="pl">− Betriebskosten</div>
+    <div class="pc" id="p1-be2"></div><div class="pc" id="p2-be2"></div><div class="pc" id="p3-be2"></div>
+    <div class="pl strong">Vor Miete</div>
+    <div class="pc" id="p1-vor"></div><div class="pc" id="p2-vor"></div><div class="pc" id="p3-vor"></div>
+    <div class="pl dim" style="color:var(--faint);font-size:12px;">Break-even-Miete/Mon</div>
+    <div class="pc dim" id="p1-bem"></div><div class="pc dim" id="p2-bem"></div><div class="pc dim" id="p3-bem"></div>
+    <div class="pl">− Miete (× 12)</div>
+    <div class="pc" id="p1-rent"></div><div class="pc" id="p2-rent"></div><div class="pc" id="p3-rent"></div>
+
+    <div class="sep"></div>
+
+    <div class="pl strong">= Betriebsergebnis</div>
+    <div class="pv" id="p1-erg"></div><div class="pv" id="p2-erg"></div><div class="pv" id="p3-erg"></div>
+  </div>
+  </div>
+  <div class="cumrow">
+    <span class="lab">Kumuliertes Betriebsergebnis Jahr 1–3</span>
+    <span class="db" id="p-cum"></span>
+  </div>
+</div>
+
+<p style="font-size:11.5px; color:var(--faint); text-align:center; margin:18px 0 0;">
+  Szenarien werden lokal in diesem Browser gespeichert. Datei frei kopier- und erweiterbar.
+</p>
+</div>
+
+<!-- FIXE ERGEBNISLEISTE -->
+<div class="bar"><div class="inner">
+  <div class="item"><span class="k">Vor Miete gesamt</span><span class="v" id="b-vm"></span></div>
+  <div class="item"><span class="k">Break-even-Miete</span><span class="v" id="b-be"></span></div>
+  <div class="spacer"></div>
+  <div class="item"><span class="k">Ergebnis Jahr 1</span><span class="v" id="b-erg"></span></div>
+</div></div>
+
+<script>
+"use strict";
+(function(){
+  var PRICE=15, HON=48, BET=0.08;
+  var nf=new Intl.NumberFormat('de-DE',{maximumFractionDigits:0});
+  var nf1=new Intl.NumberFormat('de-DE',{maximumFractionDigits:1});
+  function eur(n){var r=Math.round(n);return (r<0?'−':'')+nf.format(Math.abs(r))+' €';}
+  function eurNeg(n){return '−'+nf.format(Math.round(Math.abs(n)))+' €';}
+  function g(id){return document.getElementById(id);}
+  function num(id){return parseFloat(g(id).value)||0;}
+
+  // ---- eine Kursschicht rechnen + rendern -------------------------------
+  function courseLayer(prefix, hpc, unit, perSem){
+    var ps=num(prefix+'Ps'), r=num(prefix+'R')/100, tn=num(prefix+'Tn');
+    var matH=num('matKurse');
+    g(prefix+'Ps-o').textContent=ps+' h';
+    g(prefix+'R-o').textContent=(r*100).toFixed(0)+' %';
+    var count=hpc>0?ps/hpc:0;
+    var realH=ps*r;
+    var ums=realH*tn*PRICE;
+    var fremd=realH*(HON+matH);
+    var db=ums-fremd;
+    var conv='→ '+nf1.format(count).replace('.',',')+' '+unit+'/Jahr';
+    if(perSem) conv+=' ('+nf1.format(count/2).replace('.',',')+'/Sem.)';
+    conv+=' · realisiert '+nf.format(Math.round(realH))+' h';
+    g(prefix+'-conv').textContent=conv;
+    g(prefix+'-ums').textContent=eur(ums);
+    g(prefix+'-fr').textContent=eurNeg(fremd);
+    g(prefix+'-db').textContent=eur(db);
+    g(prefix+'-q').textContent=(ums>0?(db/ums*100).toFixed(0):'0')+' %';
+    return {ums:ums, db:db};
+  }
+
+  function calc(){
+    var wk=courseLayer('wk', num('wkTerm')*num('wkSh'), 'Kurse', true);
+    var we=courseLayer('we', num('weH'), 'Workshops', false);
+    var fe=courseLayer('fe', num('feH'), 'Workshops', false);
+
+    // ---- Nachmittag (Eventbetrieb) ----
+    var walk=num('nmWalk')/100, pG=num('nmPrice'), guest=num('nmGuest');
+    var sess=num('nmSess'), weeks=num('nmWeeks'), cap=num('nmCap'), mat=num('nmMat');
+    var pN=pG;
+    var seatsWk=sess*cap*walk;
+    var nmRev=seatsWk*pN*weeks;
+    var nmFremd=(guest*weeks)+(seatsWk*mat*weeks);
+    var nmDB=nmRev-nmFremd;
+    var perseat=pN*(1-BET)-mat, denom=sess*cap*perseat;
+    var beFill=denom>0?(guest/denom):2;
+    g('nmWalk-o').textContent=(walk*100).toFixed(0)+' %';
+    g('nmPrice-o').textContent=pG+' €';
+    g('nmGuest-o').textContent=eur(guest);
+    g('nm-be').textContent=(beFill>1?'>100':(beFill*100).toFixed(0))+' %';
+    g('nm-ums').textContent=eur(nmRev);
+    g('nm-fr').textContent=eurNeg(nmFremd);
+    g('nm-db').textContent=eur(nmDB);
+    g('nm-db').className='db '+(nmDB>=0?'':'neg');
+    g('nm-q').textContent=(nmRev>0?(nmDB/nmRev*100).toFixed(0):'0')+' %';
+
+    // ---- Teamevents (B2B) ----
+    var ev=num('teEv'), etn=num('teTn'), ep=num('tePrice'), eh=num('teHon'), em=num('teMat');
+    var teRev=ev*etn*ep;
+    var teFremd=ev*(eh+etn*em);
+    var teDB=teRev-teFremd;
+    g('te-conv').textContent=ev>0?('→ '+ev+' Events/Jahr · Ø '+etn+' TN'):'inaktiv — Events/Jahr auf > 0 setzen';
+    g('te-ums').textContent=eur(teRev);
+    g('te-fr').textContent=eurNeg(teFremd);
+    g('te-db').textContent=eur(teDB);
+    g('te-db').className='db '+(teDB>=0?'':'neg');
+    g('te-q').textContent=(teRev>0?(teDB/teRev*100).toFixed(0):'0')+' %';
+
+    // ---- standortweit ----
+    var fx=num('fx'), wv=num('wv'), betrieb=num('betrieb');
+    g('fx-o').textContent=eur(fx);
+    g('wv-o').textContent=eur(wv);
+    g('betrieb-o').textContent=eur(betrieb);
+    var totalNet=wk.ums+we.ums+fe.ums+nmRev+teRev;
+    var beteiligung=BET*totalNet;
+    var lc=fx+beteiligung;
+    var sumDB=wk.db+we.db+fe.db+nmDB+teDB;
+    var vorMiete=sumDB-lc-wv-betrieb;
+    g('g-sumdb').textContent=eur(sumDB);
+    g('g-lc').textContent=eurNeg(lc);
+    g('g-wv').textContent=eurNeg(wv);
+    g('g-be').textContent=eurNeg(betrieb);
+    g('g-lcsub').textContent='Beteiligung '+eur(beteiligung)+' (8 % auf '+eur(totalNet)+' Gesamt-Nettoumsatz)';
+
+    // ---- Ergebnisleiste ----
+    var rent=num('rent');
+    var erg=vorMiete-12*rent;
+    g('b-vm').textContent=eur(vorMiete);
+    g('b-vm').className='v '+(vorMiete>=0?'':'neg');
+    g('b-be').textContent=vorMiete>0?(eur(vorMiete/12)+'/M'):'0 €';
+    g('b-erg').textContent=(erg>=0?'+':'')+eur(erg);
+    g('b-erg').className='v '+(erg>=0?'pos':'neg');
+
+    updateProjection();
+  }
+
+  // ---- Mehrjahres-Projektion -------------------------------------------
+  // Nutzt Struktur/Preise/Ø-TN aus den Karten; je Jahr eigene Auslastung,
+  // Fixum und Miete. Werbung & Betriebskosten konstant aus dem Gesamt-Block.
+  function pCourse(plan, hpc, tn, util){
+    var realH=plan*util, ums=realH*tn*PRICE;
+    return {ums:ums, db:ums-realH*(HON+num('matKurse'))};
+  }
+  function pAfter(walk){
+    var pN=num('nmPrice'), seatsWk=num('nmSess')*num('nmCap')*walk;
+    var ums=seatsWk*pN*num('nmWeeks');
+    return {ums:ums, db:ums-(num('nmGuest')*num('nmWeeks'))-(seatsWk*num('nmMat')*num('nmWeeks'))};
+  }
+  function pTeam(ev){
+    var ums=ev*num('teTn')*num('tePrice');
+    return {ums:ums, db:ums-ev*(num('teHon')+num('teTn')*num('teMat'))};
+  }
+  function projYear(util, walk, ev, fix){
+    var wk=pCourse(num('wkPs'), num('wkTerm')*num('wkSh'), num('wkTn'), util);
+    var we=pCourse(num('wePs'), num('weH'), num('weTn'), util);
+    var fe=pCourse(num('fePs'), num('feH'), num('feTn'), util);
+    var nm=pAfter(walk), te=pTeam(ev);
+    var net=wk.ums+we.ums+fe.ums+nm.ums+te.ums;
+    var bet=BET*net, lc=fix+bet;
+    var db=wk.db+we.db+fe.db+nm.db+te.db;
+    return {net:net, db:db, lc:lc, vor:db-lc-num('wv')-num('betrieb')};
+  }
+  function updateProjection(){
+    var cum=0;
+    for(var y=1;y<=3;y++){
+      var r=projYear(num('y'+y+'Util')/100, num('y'+y+'Walk')/100, num('y'+y+'Ev'), num('y'+y+'Fix'));
+      var rent=num('y'+y+'Rent'), erg=r.vor-12*rent; cum+=erg;
+      g('p'+y+'-net').textContent=eur(r.net);
+      g('p'+y+'-db').textContent=eur(r.db);
+      g('p'+y+'-lc').textContent=eurNeg(r.lc);
+      g('p'+y+'-wv').textContent=eurNeg(num('wv'));
+      g('p'+y+'-be2').textContent=eurNeg(num('betrieb'));
+      g('p'+y+'-vor').textContent=eur(r.vor);
+      g('p'+y+'-bem').textContent=r.vor>0?(eur(r.vor/12)+'/M'):'—';
+      g('p'+y+'-rent').textContent=eurNeg(12*rent);
+      g('p'+y+'-erg').textContent=(erg>=0?'+':'')+eur(erg);
+      g('p'+y+'-erg').className='pv '+(erg>=0?'pos':'neg');
+    }
+    g('p-cum').textContent=(cum>=0?'+':'')+eur(cum);
+    g('p-cum').className='db '+(cum>=0?'pos':'neg');
+  }
+
+  // ---- alle Eingabe-IDs (für Live-Update + Szenarien) -------------------
+  var PERSIST_IDS=['wkPs','wkR','wkTn','wkTerm','wkSh','wePs','weR','weTn','weH',
+    'fePs','feR','feTn','feH','nmWalk','nmPrice','nmGuest','nmSess','nmWeeks','nmCap','nmMat',
+    'teEv','teTn','tePrice','teHon','teMat','matKurse','fx','wv','betrieb','rent','m2','ppm',
+    'y1Util','y1Walk','y1Ev','y1Fix','y1Rent','y2Util','y2Walk','y2Ev','y2Fix','y2Rent',
+    'y3Util','y3Walk','y3Ev','y3Fix','y3Rent'];
+  PERSIST_IDS.forEach(function(id){ g(id).addEventListener('input', calc); });
+
+  // ---- €/m² übernehmen ----
+  g('btnTake').addEventListener('click', function(){
+    g('rent').value=Math.round(num('m2')*num('ppm')); calc();
+  });
+
+  // ---- Standardwerte merken (für Zurücksetzen) ----
+  var DEFAULTS={}; PERSIST_IDS.forEach(function(id){ DEFAULTS[id]=g(id).value; });
+  g('btnReset').addEventListener('click', function(){
+    PERSIST_IDS.forEach(function(id){ g(id).value=DEFAULTS[id]; }); calc();
+  });
+
+  // ---- Szenarien (localStorage, fällt still zurück falls nicht verfügbar) ----
+  var KEY='zf_graz_scenarios_v1';
+  function loadStore(){ try{ return JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ return {}; } }
+  function saveStore(o){ try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(e){} }
+  function refreshList(sel){
+    var o=loadStore(), s=g('scen');
+    s.innerHTML='<option value="">— gespeicherte —</option>';
+    Object.keys(o).sort().forEach(function(n){
+      var op=document.createElement('option'); op.value=n; op.textContent=n;
+      if(n===sel) op.selected=true; s.appendChild(op);
+    });
+  }
+  g('btnSave').addEventListener('click', function(){
+    var name=prompt('Szenario-Name (z. B. „konservativ" / „Ziel J3"):');
+    if(!name) return;
+    var o=loadStore(), data={};
+    PERSIST_IDS.forEach(function(id){ data[id]=g(id).value; });
+    o[name]=data; saveStore(o); refreshList(name);
+  });
+  g('btnLoad').addEventListener('click', function(){
+    var name=g('scen').value; if(!name) return;
+    var o=loadStore(); if(!o[name]) return;
+    PERSIST_IDS.forEach(function(id){ if(o[name][id]!==undefined) g(id).value=o[name][id]; });
+    calc();
+  });
+  g('btnDel').addEventListener('click', function(){
+    var name=g('scen').value; if(!name) return;
+    if(!confirm('Szenario „'+name+'" löschen?')) return;
+    var o=loadStore(); delete o[name]; saveStore(o); refreshList('');
+  });
+
+  refreshList('');
+  calc();
+})();
+</script>
+</body>
+</html>
