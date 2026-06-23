@@ -586,27 +586,26 @@
   // ---- Detailformulare ----------------------------------------------------
   function renderKursDetail(kurs, isNew) {
     var opts=''; for(var w=1;w<=6;w++){ opts+='<option value="'+w+'"'+(kurs.tag==w?' selected':'')+'>'+WD[w]+'</option>'; }
-    var h = '
-      <div class="frow">
-        <label class="fld" style="flex:2; min-width:150px;">Titel<input type="text" id="detKursTitel" value="'+esc(kurs.titel)+'"></label>
-        <label class="fld" style="flex:1; min-width:120px;">Dozent:in<input type="text" id="detKursDozent" value="'+esc(kurs.dozent)+'"></label>
-      </div>
-      <div class="frow" style="margin-top:8px;">
-        <label class="fld">Tag<select id="detKursTag">'+opts+'</select></label>
-        <label class="fld">Uhrzeit<input type="time" id="detKursZeit" value="'+(kurs.zeit||'')+'" style="width:96px;"></label>
-        <label class="fld">Start<input type="date" id="detKursStart" value="'+(kurs.start||'')+'"></label>
-        <label class="fld">Termine<input type="number" id="detKursSessions" value="'+(kurs.sessions||7)+'" min="1" max="30" style="width:74px;"></label>
-        <label class="fld">Std/Termin<input type="number" id="detKursStd" value="'+(kurs.std||3)+'" min="0.5" max="8" step="0.5" style="width:84px;"></label>
-        <label class="fld">Raum<input type="text" id="detKursRaum" value="'+esc(kurs.raum)+'" style="width:70px;"></label>
-      </div>
-      <div class="derived">
-        <label class="chk"><input type="checkbox" id="detKursInFerien"'+(kurs.inFerien?' checked':'')+'> läuft auch in Ferien</label>
-        <label class="chk"><input type="checkbox" id="detKursEingetragen"'+(kurs.eingetragen?' checked':'')+'> Eingetragen</label>
-      </div>
-      <div class="frow" style="margin-top:12px; gap:8px;">
-        <button class="add" id="detKursSave" data-id="'+kurs.id+'" data-isnew="'+isNew+'">Übernehmen</button>
-        <button id="detKursCancel">Abbrechen</button>
-      </div>';
+    var h = '<div class="frow">'+
+        '<label class="fld" style="flex:2; min-width:150px;">Titel<input type="text" id="detKursTitel" value="'+esc(kurs.titel)+'"></label>'+
+        '<label class="fld" style="flex:1; min-width:120px;">Dozent:in<input type="text" id="detKursDozent" value="'+esc(kurs.dozent)+'"></label>'+
+      '</div>'+
+      '<div class="frow" style="margin-top:8px;">'+
+        '<label class="fld">Tag<select id="detKursTag">'+opts+'</select></label>'+
+        '<label class="fld">Uhrzeit<input type="time" id="detKursZeit" value="'+(kurs.zeit||'')+'" style="width:96px;"></label>'+
+        '<label class="fld">Start<input type="date" id="detKursStart" value="'+(kurs.start||'')+'"></label>'+
+        '<label class="fld">Termine<input type="number" id="detKursSessions" value="'+(kurs.sessions||7)+'" min="1" max="30" style="width:74px;"></label>'+
+        '<label class="fld">Std/Termin<input type="number" id="detKursStd" value="'+(kurs.std||3)+'" min="0.5" max="8" step="0.5" style="width:84px;"></label>'+
+        '<label class="fld">Raum<input type="text" id="detKursRaum" value="'+esc(kurs.raum)+'" style="width:70px;"></label>'+
+      '</div>'+
+      '<div class="derived">'+
+        '<label class="chk"><input type="checkbox" id="detKursInFerien"'+(kurs.inFerien?' checked':'')+'> läuft auch in Ferien</label>'+
+        '<label class="chk"><input type="checkbox" id="detKursEingetragen"'+(kurs.eingetragen?' checked':'')+'> Eingetragen</label>'+
+      '</div>'+
+      '<div class="frow" style="margin-top:12px; gap:8px;">'+
+        '<button class="add" id="detKursSave" data-id="'+kurs.id+'" data-isnew="'+isNew+'">Übernehmen</button>'+
+        '<button id="detKursCancel">Abbrechen</button>'+
+      '</div>';
     g('kursDetailForm').innerHTML = h;
     g('kursDetailForm').classList.add('active');
     
@@ -655,27 +654,26 @@
   }
   
   function renderWsDetail(ws, isNew) {
-    var h = '
-      <div class="frow">
-        <label class="fld" style="flex:2; min-width:150px;">Titel<input type="text" id="detWsTitel" value="'+esc(ws.titel)+'"></label>
-        <label class="fld" style="flex:1; min-width:110px;">Dozent:in<input type="text" id="detWsDozent" value="'+esc(ws.dozent)+'"></label>
-      </div>
-      <div class="frow" style="margin-top:8px;">
-        <label class="fld">Startdatum<input type="date" id="detWsStart" value="'+(ws.start||'')+'"></label>
-        <label class="fld">Tage<input type="number" id="detWsTage" value="'+(ws.tage||1)+'" min="1" style="width:70px;"></label>
-        <label class="fld">Raum<input type="text" id="detWsRaum" value="'+esc(ws.raum)+'" style="width:70px;"></label>
-      </div>
-      <div style="margin-top:8px; padding-left:10px; border-left:2px solid var(--line);">
-        <div style="font-size:12px; color:var(--muted); margin-bottom:4px;">Tageszeiten:</div>
-        <div id="detWsZeitenContainer"></div>
-      </div>
-      <div class="derived">
-        <label class="chk"><input type="checkbox" id="detWsEingetragen"'+(ws.eingetragen?' checked':'')+'> Eingetragen</label>
-      </div>
-      <div class="frow" style="margin-top:12px; gap:8px;">
-        <button class="add" id="detWsSave" data-id="'+ws.id+'" data-isnew="'+isNew+'">Übernehmen</button>
-        <button id="detWsCancel">Abbrechen</button>
-      </div>';
+    var h = '<div class="frow">'+
+        '<label class="fld" style="flex:2; min-width:150px;">Titel<input type="text" id="detWsTitel" value="'+esc(ws.titel)+'"></label>'+
+        '<label class="fld" style="flex:1; min-width:110px;">Dozent:in<input type="text" id="detWsDozent" value="'+esc(ws.dozent)+'"></label>'+
+      '</div>'+
+      '<div class="frow" style="margin-top:8px;">'+
+        '<label class="fld">Startdatum<input type="date" id="detWsStart" value="'+(ws.start||'')+'"></label>'+
+        '<label class="fld">Tage<input type="number" id="detWsTage" value="'+(ws.tage||1)+'" min="1" style="width:70px;"></label>'+
+        '<label class="fld">Raum<input type="text" id="detWsRaum" value="'+esc(ws.raum)+'" style="width:70px;"></label>'+
+      '</div>'+
+      '<div style="margin-top:8px; padding-left:10px; border-left:2px solid var(--line);">'+
+        '<div style="font-size:12px; color:var(--muted); margin-bottom:4px;">Tageszeiten:</div>'+
+        '<div id="detWsZeitenContainer"></div>'+
+      '</div>'+
+      '<div class="derived">'+
+        '<label class="chk"><input type="checkbox" id="detWsEingetragen"'+(ws.eingetragen?' checked':'')+'> Eingetragen</label>'+
+      '</div>'+
+      '<div class="frow" style="margin-top:12px; gap:8px;">'+
+        '<button class="add" id="detWsSave" data-id="'+ws.id+'" data-isnew="'+isNew+'">Übernehmen</button>'+
+        '<button id="detWsCancel">Abbrechen</button>'+
+      '</div>';
     g('wsDetailForm').innerHTML = h;
     g('wsDetailForm').classList.add('active');
     
