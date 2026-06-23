@@ -371,6 +371,12 @@
     return dates;
   }
   
+  // Helfer: Prüfe ob zwei Zeitbereiche überlappen
+  function timesOverlap(von1, bis1, von2, bis2) {
+    if (von1 === null || bis1 === null || von2 === null || bis2 === null) return false;
+    return von1 < bis2 && von2 < bis1;
+  }
+  
   // Gesamtstunden für einen Workshop berechnen
   function getWorkshopTotalHours(ws) {
     if (!ws.zeiten) return 0;
@@ -870,23 +876,72 @@
       row('Wochenkurse', sumWkYear, state.sollWk, dWk)+
       row('Workshops', sumWsYear, state.sollWs, dWs);
 
-    // Konflikte (Wochenkurse: gleicher Tag + Zeitüberlappung + gleicher Raum/Dozent)
-    var konf=[];
-    var ks=state.kurse;
-    for(var i=0;i<ks.length;i++){ for(var j=i+1;j<ks.length;j++){
-      var a=ks[i], b=ks[j];
-      if(+a.tag!==+b.tag) continue;
-      var as=toMin(a.zeit), ae=as+(+a.std)*60, bs=toMin(b.zeit), be=bs+(+b.std)*60;
-      if(as===null||bs===null) continue;
-      if(as<be && bs<ae){
-        if(a.raum && b.raum && a.raum.trim().toLowerCase()===b.raum.trim().toLowerCase())
-          konf.push('Raum '+a.raum+': „'+(a.titel||'?')+'" und „'+(b.titel||'?')+'" überschneiden sich ('+WD[+a.tag]+' '+a.zeit+')');
-        if(a.dozent && b.dozent && a.dozent.trim().toLowerCase()===b.dozent.trim().toLowerCase())
-          konf.push(a.dozent+': „'+(a.titel||'?')+'" und „'+(b.titel||'?')+'" gleichzeitig ('+WD[+a.tag]+' '+a.zeit+')');
+    // Konfliktprüfung auf Datumsebene (Block 8)
+    // Bilde eine Liste aller belegten Slots: {datum, von, bis, raum, dozent, titel}
+    var slots = [];
+    
+    // Kurse: Jede Sitzung ist ein Slot
+    state.kurse.forEach(function(k) {
+      var dates = genDates(k.start, +k.tag, +k.sessions, !!k.inFerien);
+      var vonMin = toMin(k.zeit);
+      var bisMin = vonMin + (+k.std) * 60;
+      dates.forEach(function(d) {
+        slots.push({
+          datum: d,
+          von: vonMin,
+          bis: bisMin,
+          raum: k.raum || '',
+          dozent: k.dozent || '',
+          titel: k.titel || '?'
+        });
+      });
+    });
+    
+    // Workshops: Jeder Tag ist ein Slot (mit seinen Zeiten)
+    state.workshops.forEach(function(w) {
+      var dates = getWorkshopDates(w);
+      dates.forEach(function(d, i) {
+        if (w.zeiten && w.zeiten[i]) {
+          var vonMin = toMin(w.zeiten[i].von);
+          var bisMin = toMin(w.zeiten[i].bis);
+          slots.push({
+            datum: d,
+            von: vonMin,
+            bis: bisMin,
+            raum: w.raum || '',
+            dozent: w.dozent || '',
+            titel: w.titel || '?'
+          });
+        }
+      });
+    });
+    
+    // Prüfe alle Slots auf Konflikte
+    var konf = [];
+    for (var i = 0; i < slots.length; i++) {
+      for (var j = i + 1; j < slots.length; j++) {
+        var a = slots[i], b = slots[j];
+        // Nur am selben Datum prüfen
+        if (!sameDay(a.datum, b.datum)) continue;
+        
+        // Prüfe Zeitüberlappung
+        if (!timesOverlap(a.von, a.bis, b.von, b.bis)) continue;
+        
+        // Konflikt wenn gleicher Raum ODER gleiche Dozent:in
+        var sameRaum = a.raum && b.raum && a.raum.trim().toLowerCase() === b.raum.trim().toLowerCase();
+        var sameDozent = a.dozent && b.dozent && a.dozent.trim().toLowerCase() === b.dozent.trim().toLowerCase();
+        
+        if (sameRaum) {
+          konf.push('Raum ' + a.raum + ': „' + a.titel + '" und „' + b.titel + '" überschneiden sich (' + fmt(a.datum) + ')');
+        }
+        if (sameDozent) {
+          konf.push(a.dozent + ': „' + a.titel + '" und „' + b.titel + '" gleichzeitig (' + fmt(a.datum) + ')');
+        }
       }
-    }}
+    }
+    
     g('konflikte').innerHTML = konf.length
-      ? '<div class="konf">⚠ '+konf.join('<br>⚠ ')+'</div>'
+      ? '<div class="konf">⚠ ' + konf.join('<br>⚠ ') + '</div>'
       : '<div class="ok">Keine Raum- oder Dozenten-Konflikte erkannt.</div>';
 
     // Leiste (jahresgenau)
