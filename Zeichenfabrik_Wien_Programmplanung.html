@@ -248,6 +248,33 @@
   function g(id){return document.getElementById(id);}
   function uid(){ return 'x'+Math.random().toString(36).slice(2,9); }
 
+  // ---- Benachrichtigungen ------------------------------------------------
+  function showNotification(msg, duration) {
+    duration = duration || 1500;
+    var notification = document.createElement('div');
+    notification.style.position = 'fixed';
+    notification.style.bottom = '100px';
+    notification.style.left = '50%';
+    notification.style.transform = 'translateX(-50%)';
+    notification.style.background = 'var(--accent)';
+    notification.style.color = '#fff';
+    notification.style.padding = '10px 20px';
+    notification.style.borderRadius = 'var(--r)';
+    notification.style.fontSize = '13px';
+    notification.style.zIndex = '1000';
+    notification.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+    notification.textContent = msg;
+    document.body.appendChild(notification);
+    
+    setTimeout(function() {
+      notification.style.opacity = '0';
+      notification.style.transition = 'opacity 0.3s';
+      setTimeout(function() {
+        document.body.removeChild(notification);
+      }, 300);
+    }, duration);
+  }
+
   // ---- Aufklappbare Karten (Block 5) -------------------------------------
   function toggleCard(cardId) {
     var card = g(cardId);
@@ -704,11 +731,17 @@
   function copyToClipboardKurs(kurs) {
     var dates = genDates(kurs.start, +kurs.tag, +kurs.sessions, !!kurs.inFerien);
     var dateStrs = dates.map(function(d) { return fmt(d); });
+    var totalHours = (+kurs.sessions) * (+kurs.std);
+    
+    // Format: Titel — Dozent: [Name]
+    // Wochentag Uhrzeit · Raum
+    // N Termine: datum1, datum2, ...
+    // X Stunden gesamt
     var text = 
       kurs.titel + ' — Dozent: ' + (kurs.dozent || '?') + '\n' +
       WD[+kurs.tag] + ' ' + (kurs.zeit||'?') + ' · Raum ' + (kurs.raum||'?') + '\n' +
       kurs.sessions + ' Termine: ' + dateStrs.join(', ') + '\n' +
-      nf.format((+kurs.sessions) * (+kurs.std)) + ' Stunden gesamt';
+      nf.format(totalHours) + ' Stunden gesamt';
     
     copyToClipboard(text);
   }
@@ -716,37 +749,76 @@
   function copyToClipboardWs(ws) {
     var dates = getWorkshopDates(ws);
     var dateStrs = dates.map(function(d) { return fmt(d); });
-    var zeitenStrs = (ws.zeiten||[]).map(function(z) { return (z.von||'?') + '–' + (z.bis||'?'); });
+    var totalHours = getWorkshopTotalHours(ws);
+    
+    // Format für Workshops:
+    // Titel — Dozent: [Name]
+    // Datum1: von1–bis1, Datum2: von2–bis2, ...
+    // Raum X
+    // Y Stunden gesamt
+    var zeitenLines = [];
+    if (ws.zeiten && ws.zeiten.length > 0) {
+      dates.forEach(function(d, i) {
+        if (ws.zeiten[i]) {
+          zeitenLines.push(fmt(d) + ': ' + (ws.zeiten[i].von||'?') + '–' + (ws.zeiten[i].bis||'?'));
+        }
+      });
+    }
+    
     var text = 
       ws.titel + ' — Dozent: ' + (ws.dozent || '?') + '\n' +
-      dateStrs.join(', ') + ' · ' + zeitenStrs.join(' · ') + '\n' +
+      zeitenLines.join(', ') + '\n' +
       'Raum ' + (ws.raum||'?') + '\n' +
-      nf.format(getWorkshopTotalHours(ws)) + ' Stunden gesamt';
+      nf.format(totalHours) + ' Stunden gesamt';
     
     copyToClipboard(text);
   }
   
   function copyToClipboard(text) {
+    var success = false;
     try {
       navigator.clipboard.writeText(text).then(function() {
-        alert('Kopiert ✓');
+        showNotification('Kopiert ✓');
+        success = true;
+      }).catch(function(e) {
+        // Fallback versuchen
+        fallbackCopy(text);
       });
     } catch (e) {
       // Fallback für file:// oder ältere Browser
-      var textarea = document.createElement('textarea');
-      textarea.value = text;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = 0;
-      document.body.appendChild(textarea);
-      textarea.select();
-      try {
-        document.execCommand('copy');
-        alert('Kopiert ✓');
-      } catch (e2) {
-        alert('Kopieren fehlgeschlagen: ' + e2.message);
-      }
-      document.body.removeChild(textarea);
+      fallbackCopy(text);
     }
+    
+    if (!success) {
+      // Falls der Promise nicht sofort erfolgreich war, Fallback versuchen
+      setTimeout(function() {
+        if (!success) fallbackCopy(text);
+      }, 100);
+    }
+  }
+  
+  function fallbackCopy(text) {
+    var textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = 0;
+    textarea.style.top = '0';
+    textarea.style.left = '0';
+    textarea.style.width = '1px';
+    textarea.style.height = '1px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      var copied = document.execCommand('copy');
+      if (copied) {
+        showNotification('Kopiert ✓');
+      } else {
+        showNotification('Kopieren fehlgeschlagen');
+      }
+    } catch (e2) {
+      showNotification('Kopieren fehlgeschlagen');
+    }
+    document.body.removeChild(textarea);
   }
 
   // ---- Berechnung (ohne Neuaufbau der Eingaben) -------------------------
