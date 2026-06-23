@@ -244,6 +244,42 @@
 
 <script>
 "use strict";
+
+// ---- Globale Funktionen (für HTML-Attribute wie onclick) --------------------
+function toggleCard(cardId) {
+  var card = document.getElementById(cardId);
+  if (card) {
+    card.classList.toggle('collapsed');
+    // Zustand in localStorage speichern
+    try {
+      var collapsed = card.classList.contains('collapsed');
+      localStorage.setItem('zf_sperr_collapsed', collapsed ? '1' : '0');
+    } catch(e) {}
+  }
+}
+
+function initCollapsibleCards() {
+  // Sperrzeiten-Karte: standardmäßig eingeklappt
+  try {
+    var card = document.getElementById('sperrCard');
+    if (card) {
+      var collapsed = localStorage.getItem('zf_sperr_collapsed');
+      if (collapsed === '1') {
+        card.classList.add('collapsed');
+      } else if (collapsed !== '0') {
+        // Default: eingeklappt
+        card.classList.add('collapsed');
+        localStorage.setItem('zf_sperr_collapsed', '1');
+      }
+    }
+  } catch(e) {
+    // Falls localStorage nicht verfügbar
+    var card = document.getElementById('sperrCard');
+    if (card) card.classList.add('collapsed');
+  }
+}
+
+// ---- Haupt-App (IIFE) ------------------------------------------------------
 (function(){
   var WD=['So','Mo','Di','Mi','Do','Fr','Sa']; // getDay() index
   var nf=new Intl.NumberFormat('de-DE',{maximumFractionDigits:0});
@@ -277,33 +313,7 @@
     }, duration);
   }
 
-  // ---- Aufklappbare Karten (Block 5) -------------------------------------
-  function toggleCard(cardId) {
-    var card = g(cardId);
-    card.classList.toggle('collapsed');
-    // Zustand in localStorage speichern
-    try {
-      var collapsed = card.classList.contains('collapsed');
-      localStorage.setItem('zf_sperr_collapsed', collapsed ? '1' : '0');
-    } catch(e) {}
-  }
-  
-  function initCollapsibleCards() {
-    // Sperrzeiten-Karte: standardmäßig eingeklappt
-    try {
-      var collapsed = localStorage.getItem('zf_sperr_collapsed');
-      if (collapsed === '1') {
-        g('sperrCard').classList.add('collapsed');
-      } else if (collapsed !== '0') {
-        // Default: eingeklappt
-        g('sperrCard').classList.add('collapsed');
-        localStorage.setItem('zf_sperr_collapsed', '1');
-      }
-    } catch(e) {
-      // Falls localStorage nicht verfügbar
-      g('sperrCard').classList.add('collapsed');
-    }
-  }
+
 
   // ---- Datums-Helfer ----------------------------------------------------
   function parseD(s){ if(!s) return null; var p=s.split('-'); if(p.length!==3) return null; return new Date(+p[0],+p[1]-1,+p[2]); }
