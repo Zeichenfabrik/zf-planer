@@ -320,6 +320,7 @@
           '<label class="chk"><input type="checkbox" data-t="kurse" data-id="'+k.id+'" data-f="inFerien"'+(k.inFerien?' checked':'')+'> läuft auch in Ferien</label>'+
           '<label class="chk"><input type="checkbox" data-t="kurse" data-id="'+k.id+'" data-f="eingetragen"'+(k.eingetragen?' checked':'')+'> Eingetragen</label>'+
           '<span id="d-'+k.id+'"></span>'+
+          (k.eingetragen ? '<span style="color:var(--pos); font-weight:bold; margin-left:10px;">✓</span>' : '') +
           '<button class="del" data-del="kurse" data-id="'+k.id+'">Entfernen</button>'+
         '</div>'+
         '</div>';
@@ -372,6 +373,7 @@
         '</div>'+
         '<div class="derived">'+
           '<label class="chk"><input type="checkbox" data-t="workshops" data-id="'+w.id+'" data-f="eingetragen"'+(w.eingetragen?' checked':'')+'> Eingetragen</label>'+
+          (w.eingetragen ? '<span style="color:var(--pos); font-weight:bold; margin-left:10px;">✓</span>' : '') +
           '<span>Daten: '+dateInfo+' · <b>Stunden: '+nf.format(totalHours)+' h</b></span>'+
         '</div>'+
         '</div>';
