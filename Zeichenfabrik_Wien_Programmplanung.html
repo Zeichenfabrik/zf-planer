@@ -136,6 +136,8 @@
   <button id="btnSave">Speichern als …</button>
   <button id="btnDel">Löschen</button>
   <span style="flex:1"></span>
+  <button id="btnExport">JSON Export</button>
+  <button id="btnImport">JSON Import</button>
   <button id="btnReset">Zurücksetzen</button>
 </div>
 
@@ -1082,6 +1084,54 @@
     }
   });
 
+  // ---- JSON Export/Import (Block 9) ----------------------------------------
+  function exportJSON() {
+    var data = JSON.parse(JSON.stringify(state));
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'zf-programm-' + state.planjahr + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showNotification('Export erfolgreich ✓');
+  }
+  
+  function importJSON() {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.addEventListener('change', function(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          var data = JSON.parse(e.target.result);
+          // Validierung: Prüfe ob die Daten die erwartete Struktur haben
+          if (data && data.kurse && data.workshops && data.sperr) {
+            state = data;
+            // UI aktualisieren
+            g('planjahr').value = state.planjahr;
+            g('sollWk').value = state.sollWk;
+            g('sollWs').value = state.sollWs;
+            renderAll();
+            showNotification('Import erfolgreich ✓');
+          } else {
+            showNotification('Ungültige JSON-Datei');
+          }
+        } catch (e) {
+          showNotification('Fehler beim Import: ' + e.message);
+        }
+      };
+      reader.readAsText(file);
+    });
+    input.click();
+  }
+
   // ---- Szenarien --------------------------------------------------------
   var KEY='zf_wien_programm_v1';
   function store(){ try{ return JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ return {}; } }
@@ -1113,6 +1163,10 @@
     g('sollWs').value=state.sollWs; 
     renderAll();
   });
+  
+  // JSON Export/Import Buttons
+  g('btnExport').addEventListener('click', exportJSON);
+  g('btnImport').addEventListener('click', importJSON);
 
   // Initialisiere UI-Felder
   g('planjahr').value = state.planjahr;
