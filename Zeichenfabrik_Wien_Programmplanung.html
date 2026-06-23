@@ -770,13 +770,25 @@ function initCollapsibleCards() {
     var dateStrs = dates.map(function(d) { return fmt(d); });
     var totalHours = (+kurs.sessions) * (+kurs.std);
     
+    // Endzeit berechnen: Startzeit + Std/Termin
+    var endZeit = '';
+    if (kurs.zeit && kurs.std) {
+      var startMin = toMin(kurs.zeit);
+      var endMin = startMin + (+kurs.std) * 60;
+      if (startMin !== null && endMin !== null) {
+        var endH = Math.floor(endMin / 60);
+        var endM = endMin % 60;
+        endZeit = (kurs.zeit||'?') + '–' + pad(endH) + ':' + pad(endM);
+      }
+    }
+    
     // Format: Titel — Dozent: [Name]
-    // Wochentag Uhrzeit · Raum
+    // Wochentag Uhrzeit-Bis · Raum
     // N Termine: datum1, datum2, ...
     // X Stunden gesamt
     var text = 
       kurs.titel + ' — Dozent: ' + (kurs.dozent || '?') + '\n' +
-      WD[+kurs.tag] + ' ' + (kurs.zeit||'?') + ' · Raum ' + (kurs.raum||'?') + '\n' +
+      WD[+kurs.tag] + ' ' + endZeit + ' · Raum ' + (kurs.raum||'?') + '\n' +
       kurs.sessions + ' Termine: ' + dateStrs.join(', ') + '\n' +
       nf.format(totalHours) + ' Stunden gesamt';
     
