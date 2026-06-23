@@ -110,6 +110,15 @@
   .detail-form .frow{margin-bottom:8px;}
   .detail-form .derived{margin-top:12px; padding-top:8px; border-top:1px solid var(--line);}
 
+  /* Aufklappbare Karten (Block 5) */
+  .card.collapsible{position:relative;}
+  .card.collapsible .card-header{cursor:pointer; user-select:none; padding:0; margin:0 0 10px;}
+  .card.collapsible .card-header h2{margin:0;}
+  .card.collapsible .card-header .toggle{position:absolute; right:15px; top:50%; transform:translateY(-50%); font-size:18px; color:var(--muted);}
+  .card.collapsible.collapsed .card-body{display:none;}
+  .card.collapsible.collapsed .toggle{transform:translateY(-50%) rotate(-90deg);}
+  .card.collapsible .card-body{padding:0;}
+
   @media print{ .toolbar,.bar,button{display:none;} body{padding-bottom:0;} }
 </style>
 </head>
@@ -142,12 +151,17 @@
 </div>
 
 <!-- SPERRZEITEN -->
-<div class="card">
-  <h2>Sperrzeiten (Ferien &amp; Schließzeiten)</h2>
-  <div class="sub">blockieren Wochenkurs-Termine — Grenzen frei editierbar · Workshops sind ausgenommen</div>
-  <div id="sperrList"></div>
-  <button class="add" id="addSperr">+ Sperrzeit hinzufügen</button>
-  <div class="fhint" id="feiertage" style="margin-top:12px;"></div>
+<div class="card collapsible" id="sperrCard">
+  <div class="card-header" onclick="toggleCard('sperrCard')">
+    <h2>Sperrzeiten (Ferien &amp; Schließzeiten)</h2>
+    <span class="toggle">▼</span>
+  </div>
+  <div class="card-body">
+    <div class="sub">blockieren Wochenkurs-Termine — Grenzen frei editierbar · Workshops sind ausgenommen</div>
+    <div id="sperrList"></div>
+    <button class="add" id="addSperr">+ Sperrzeit hinzufügen</button>
+    <div class="fhint" id="feiertage" style="margin-top:12px;"></div>
+  </div>
 </div>
 
 <!-- WOCHENKURSE -->
@@ -233,6 +247,34 @@
   var nf=new Intl.NumberFormat('de-DE',{maximumFractionDigits:0});
   function g(id){return document.getElementById(id);}
   function uid(){ return 'x'+Math.random().toString(36).slice(2,9); }
+
+  // ---- Aufklappbare Karten (Block 5) -------------------------------------
+  function toggleCard(cardId) {
+    var card = g(cardId);
+    card.classList.toggle('collapsed');
+    // Zustand in localStorage speichern
+    try {
+      var collapsed = card.classList.contains('collapsed');
+      localStorage.setItem('zf_sperr_collapsed', collapsed ? '1' : '0');
+    } catch(e) {}
+  }
+  
+  function initCollapsibleCards() {
+    // Sperrzeiten-Karte: standardmäßig eingeklappt
+    try {
+      var collapsed = localStorage.getItem('zf_sperr_collapsed');
+      if (collapsed === '1') {
+        g('sperrCard').classList.add('collapsed');
+      } else if (collapsed !== '0') {
+        // Default: eingeklappt
+        g('sperrCard').classList.add('collapsed');
+        localStorage.setItem('zf_sperr_collapsed', '1');
+      }
+    } catch(e) {
+      // Falls localStorage nicht verfügbar
+      g('sperrCard').classList.add('collapsed');
+    }
+  }
 
   // ---- Datums-Helfer ----------------------------------------------------
   function parseD(s){ if(!s) return null; var p=s.split('-'); if(p.length!==3) return null; return new Date(+p[0],+p[1]-1,+p[2]); }
@@ -917,6 +959,9 @@
   g('planjahr').value = state.planjahr;
   g('sollWk').value = state.sollWk;
   g('sollWs').value = state.sollWs;
+  
+  // Aufklappbare Karten initialisieren
+  initCollapsibleCards();
   
   // Sortierung einrichten
   setupSorting();
