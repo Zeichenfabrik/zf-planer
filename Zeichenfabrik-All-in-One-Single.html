@@ -671,7 +671,7 @@
   <h2>Plansoll (aus dem Standortrechner)</h2>
   <div class="sub">Zielstunden je Schicht — hier eintragen, was der Rechner vorgibt</div>
   <div class="soll">
-    <label class="fld" style="min-width:150px;">Planjahr<input type="number" id="programm_planjahr" value="2026" min="2020" max="2030" step="1"></label>
+    <label class="fld" style="min-width:150px;">Planjahr<input type="number" id="programm_planjahr" value="2027" min="2020" max="2030" step="1"></label>
     <label class="fld" style="min-width:170px;">Wochenkurse Soll (h/Jahr)<input type="number" id="programm_sollWk" value="1000" min="0" step="10"></label>
     <label class="fld" style="min-width:170px;">Workshops Soll (h/Jahr)<input type="number" id="programm_sollWs" value="532" min="0" step="10"></label>
   </div>
@@ -1447,7 +1447,7 @@ function programm_initCollapsibleCards() {
   // ---- State ------------------------------------------------------------
   function freshState(){
     return {
-      planjahr: 2026,
+      planjahr: 2027,
       sollWk:1000, sollWs:532,
       sperr:[
         {id:uid(),name:'Semesterferien 2026', von:'2026-01-31', bis:'2026-02-08'},
@@ -1462,10 +1462,10 @@ function programm_initCollapsibleCards() {
         {id:uid(),name:'Sommerferien 2027',   von:'2027-07-03', bis:'2027-09-05'}
       ],
       kurse:[
-        {id:uid(),titel:'Aktzeichnen Grundkurs', dozent:'', tag:3, zeit:'18:00', start:'2026-03-04', sessions:7, std:3, raum:'1', inFerien:false, eingetragen:false}
+        {id:uid(),titel:'Aktzeichnen Grundkurs', dozent:'', tag:3, zeit:'18:00', start:'2027-03-03', sessions:7, std:3, raum:'1', inFerien:false, eingetragen:false}
       ],
       workshops:[
-        {id:uid(),titel:'Wochenend-Workshop Aquarell', dozent:'', start:'2026-04-18', tage:1, zeiten:[{von:'10:00', bis:'17:00'}], raum:'2', eingetragen:false}
+        {id:uid(),titel:'Wochenend-Workshop Aquarell', dozent:'', start:'2027-04-17', tage:1, zeiten:[{von:'10:00', bis:'17:00'}], raum:'2', eingetragen:false}
       ]
     };
   }
@@ -2046,7 +2046,7 @@ function programm_initCollapsibleCards() {
   document.addEventListener('change', onEdit);
   function onEdit(e){
     var t=e.target;
-    if(t.id==='programm_planjahr'){ state.planjahr=+t.value||2026; recompute(); return; }
+    if(t.id==='programm_planjahr'){ state.planjahr=+t.value||2027; recompute(); return; }
     if(t.id==='programm_sollWk'){ state.sollWk=+t.value||0; recompute(); return; }
     if(t.id==='programm_sollWs'){ state.sollWs=+t.value||0; recompute(); return; }
     var tbl=t.getAttribute&&t.getAttribute('data-t'), id=t.getAttribute&&t.getAttribute('data-id'), f=t.getAttribute&&t.getAttribute('data-f');
