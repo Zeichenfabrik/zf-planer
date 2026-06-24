@@ -245,6 +245,15 @@
 .beleg-ws-list{display:flex; flex-direction:column;}
 .beleg-ws-row{display:grid; grid-template-columns:130px 50px 1fr 1fr; gap:8px; font-size:12px; padding:5px 0; border-bottom:1px solid var(--line);}
 .beleg-ws-row:last-child{border-bottom:none;}
+.db-preview{width:100%; border-collapse:collapse; font-size:13px; margin:4px 0; font-variant-numeric:tabular-nums;}
+.db-preview th,.db-preview td{padding:6px 8px; text-align:right; border-bottom:1px solid var(--line);}
+.db-preview th:first-child,.db-preview td:first-child{text-align:left;}
+.db-preview th{font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.03em;}
+.db-preview tr.strong td{font-weight:600; border-top:1px solid var(--line); border-bottom:none;}
+.crosscheck{font-size:12.5px; color:var(--muted); margin-top:12px; padding-top:9px; border-top:1px dashed var(--line); line-height:1.7;}
+.kurs-db{white-space:nowrap; font-variant-numeric:tabular-nums;}
+.detail-db{margin-top:10px; padding:8px 10px; background:var(--card); border-radius:var(--r); font-size:12px; color:var(--muted);}
+.detail-db b{color:var(--ink);}
 </style>
 </head>
 <body>
@@ -723,6 +732,20 @@
   </div>
 </div>
 
+<!-- FINANZ-ANNAHMEN -->
+<div class="card">
+  <h2>Finanz-Annahmen (pro Planjahr)</h2>
+  <div class="sub">Grundwerte für die DB-Vorschau — netto · pro Kurs/Workshop einzeln überschreibbar</div>
+  <div class="soll">
+    <label class="fld" style="min-width:160px;">Kurspreis €/Std je TN<input type="number" id="programm_finPreis" value="15" min="0" step="0.5"></label>
+    <label class="fld" style="min-width:160px;">Dozentenhonorar €/Std<input type="number" id="programm_finHon" value="48" min="0" step="1"></label>
+    <label class="fld" style="min-width:150px;">Material/Modell €/Std<input type="number" id="programm_finMat" value="3" min="0" step="0.5"></label>
+    <label class="fld" style="min-width:130px;">Ø-TN Wochenkurse<input type="number" id="programm_finTnWk" value="8" min="0" step="0.5"></label>
+    <label class="fld" style="min-width:130px;">Ø-TN Workshops<input type="number" id="programm_finTnWs" value="12" min="0" step="0.5"></label>
+    <button id="programm_btnFinVomRechner" style="align-self:flex-end;" title="Kurspreis, Honorar, Material und Ø-TN aus dem Wien-Standortrechner übernehmen">↤ Annahmen aus Wien-Rechner</button>
+  </div>
+</div>
+
 <!-- SPERRZEITEN -->
 <div class="card collapsible" id="programm_sperrCard">
   <div class="card-header" onclick="programm_toggleCard('programm_sperrCard')">
@@ -765,6 +788,7 @@
           <th data-sort="raum">Raum</th>
           <th data-sort="total">Stunden ges.</th>
           <th data-sort="ende">Ende</th>
+          <th>DB (Quote)</th>
           <th class="actions">Aktionen</th>
         </tr>
       </thead>
@@ -791,6 +815,7 @@
           <th data-sort="zeiten">Uhrzeiten</th>
           <th data-sort="raum">Raum</th>
           <th data-sort="total">Stunden ges.</th>
+          <th>DB (Quote)</th>
           <th class="actions">Aktionen</th>
         </tr>
       </thead>
@@ -819,6 +844,13 @@
   <div class="sub">für das Planjahr <strong id="programm_abgleichJahr"></strong></div>
   <div id="programm_abgleich"></div>
   <div id="programm_konflikte" style="margin-top:10px;"></div>
+</div>
+
+<!-- DB-VORSCHAU -->
+<div class="card" style="background:var(--card2); border:1px solid var(--line);">
+  <h2>Honorar- &amp; DB-Vorschau</h2>
+  <div class="sub">finanzielle Wirkung des Stundenplans — gleiches Modell wie der Standortrechner · nur Termine/Tage im Planjahr</div>
+  <div id="programm_dbPreview"></div>
 </div>
 
 <p style="font-size:11.5px; color:var(--faint); text-align:center; margin:18px 0 0;">
@@ -1559,6 +1591,7 @@ function programm_initCollapsibleCards() {
       jahre:{
         '2027':{
           sollWk:1000, sollWs:532,
+          preis:15, honorar:48, material:3, tnWk:8, tnWs:12,
           kurse:[
             {id:uid(),titel:'Aktzeichnen Grundkurs', dozent:'', tag:3, zeit:'18:00', start:'2027-03-03', sessions:7, std:3, raum:'1', inFerien:false, eingetragen:false}
           ],
@@ -1578,6 +1611,11 @@ function programm_initCollapsibleCards() {
     if(!j){ j=state.jahre[y]={sollWk:1000, sollWs:532, kurse:[], workshops:[]}; }
     if(j.sollWk==null) j.sollWk=1000;
     if(j.sollWs==null) j.sollWs=532;
+    if(j.preis==null) j.preis=15;
+    if(j.honorar==null) j.honorar=48;
+    if(j.material==null) j.material=3;
+    if(j.tnWk==null) j.tnWk=8;
+    if(j.tnWs==null) j.tnWs=12;
     if(!Array.isArray(j.kurse)) j.kurse=[];
     if(!Array.isArray(j.workshops)) j.workshops=[];
     return j;
@@ -1691,6 +1729,7 @@ function programm_initCollapsibleCards() {
         '<td data-col="raum">'+esc(k.raum)+'</td>'+
         '<td data-col="total">'+nf.format(totalHours)+'</td>'+
         '<td data-col="ende">'+endDate+'</td>'+
+        '<td data-col="db">'+dbCell(calcKurs(k))+'</td>'+
         '<td class="actions">'+
           '<button class="edit" data-edit="kurse" data-id="'+k.id+'">Bearbeiten</button>'+
           '<button class="copy" data-copy="kurse" data-id="'+k.id+'">Kopieren</button>'+
@@ -1698,7 +1737,7 @@ function programm_initCollapsibleCards() {
         '</td>'+
         '</tr>';
     });
-    g('programm_kursList').innerHTML=h || '<tr><td colspan="12" style="text-align:center; color:var(--muted);">Keine Wochenkurse</td></tr>';
+    g('programm_kursList').innerHTML=h || '<tr><td colspan="13" style="text-align:center; color:var(--muted);">Keine Wochenkurse</td></tr>';
     
     // Sortier-Indikatoren aktualisieren
     document.querySelectorAll('#programm_kursTable th').forEach(function(th) {
@@ -1757,6 +1796,7 @@ function programm_initCollapsibleCards() {
         '<td data-col="zeiten">'+zeitenStr+'</td>'+
         '<td data-col="raum">'+esc(w.raum)+'</td>'+
         '<td data-col="total">'+nf.format(totalHours)+'</td>'+
+        '<td data-col="db">'+dbCell(calcWsEntry(w))+'</td>'+
         '<td class="actions">'+
           '<button class="edit" data-edit="workshops" data-id="'+w.id+'">Bearbeiten</button>'+
           '<button class="copy" data-copy="workshops" data-id="'+w.id+'">Kopieren</button>'+
@@ -1764,7 +1804,7 @@ function programm_initCollapsibleCards() {
         '</td>'+
         '</tr>';
     });
-    g('programm_wsList').innerHTML=h || '<tr><td colspan="9" style="text-align:center; color:var(--muted);">Keine Workshops</td></tr>';
+    g('programm_wsList').innerHTML=h || '<tr><td colspan="10" style="text-align:center; color:var(--muted);">Keine Workshops</td></tr>';
     
     // Sortier-Indikatoren aktualisieren
     document.querySelectorAll('#programm_wsTable th').forEach(function(th) {
@@ -1885,6 +1925,54 @@ function programm_initCollapsibleCards() {
     container.innerHTML = html;
   }
 
+  // DB-Quote, die der Wien-Rechner für Wochenkurse annimmt (Cross-Check-Referenz)
+  function wienRefQuote(f){
+    var p=g('wien_price'), h=g('wien_hon'), m=g('wien_matKurse'), tn=g('wien_wkTn');
+    var preis=p?parseFloat(p.value):f.preis;
+    var hon=h?parseFloat(h.value):f.honorar;
+    var mat=m?parseFloat(m.value):f.material;
+    var t=tn?parseFloat(tn.value):f.tnWk;
+    var denom=t*preis;
+    if(!denom) return null;
+    return 1-(hon+mat)/denom;
+  }
+  function renderDbPreview(){
+    var box=g('programm_dbPreview'); if(!box) return;
+    var f=fin();
+    var wk={umsatz:0,fremd:0,db:0}, ws={umsatz:0,fremd:0,db:0};
+    cur().kurse.forEach(function(k){ var r=calcKurs(k); wk.umsatz+=r.umsatz; wk.fremd+=r.fremd; wk.db+=r.db; });
+    cur().workshops.forEach(function(w){ var r=calcWsEntry(w); ws.umsatz+=r.umsatz; ws.fremd+=r.fremd; ws.db+=r.db; });
+    var ges={umsatz:wk.umsatz+ws.umsatz, fremd:wk.fremd+ws.fremd, db:wk.db+ws.db};
+    function q(o){ return o.umsatz>0?pctRound(o.db/o.umsatz):'—'; }
+    var rows=[['Wochenkurse',wk,false],['Workshops',ws,false],['Gesamt',ges,true]];
+    var html='<table class="db-preview"><thead><tr><th>Schicht</th><th>Umsatz</th><th>Fremdleistung</th><th>DB</th><th>DB-Quote</th></tr></thead><tbody>';
+    rows.forEach(function(row){
+      var o=row[1];
+      html+='<tr'+(row[2]?' class="strong"':'')+'><td>'+row[0]+'</td>'+
+        '<td>'+eur(o.umsatz)+'</td>'+
+        '<td>'+eur(o.fremd)+'</td>'+
+        '<td class="'+(o.db>=0?'pos':'neg')+'">'+eur(o.db)+'</td>'+
+        '<td>'+q(o)+'</td></tr>';
+    });
+    html+='</tbody></table>';
+    // Cross-Check gegen die Wien-Rechner-Annahme
+    var ref=wienRefQuote(f);
+    var planQ=ges.umsatz>0?ges.db/ges.umsatz:null;
+    if(ref!=null){
+      html+='<div class="crosscheck">'+
+        'Geplante Gesamt-DB-Quote: <b>'+(planQ!=null?pctRound(planQ):'—')+'</b> · '+
+        'Wien-Rechner-Annahme (Wochenkurse): <b>'+pctRound(ref)+'</b>';
+      if(planQ!=null){
+        var diff=Math.round((planQ-ref)*100);
+        if(diff<-3){ html+='<br><span class="warn-hint">&#9888; '+diff+' %-Punkte unter der Rechner-Annahme — der Plan ist weniger profitabel als angenommen.</span>'; }
+      }
+      html+='</div>';
+    }
+    box.innerHTML=html;
+  }
+  // Finanzannahme geändert → DB-Spalten der Listen + Vorschau neu rechnen
+  function financeChanged(){ renderKurse(); renderWs(); recompute(); persist(); }
+
   function renderAll(){
     renderSperr();
     renderKurse();
@@ -1900,6 +1988,7 @@ function programm_initCollapsibleCards() {
   // ---- Detailformulare ----------------------------------------------------
   function renderKursDetail(kurs, isNew) {
     var opts=''; for(var w=1;w<=6;w++){ opts+='<option value="'+w+'"'+(kurs.tag==w?' selected':'')+'>'+WD[w]+'</option>'; }
+    var f=fin();
     var h = '<div class="frow">'+
         '<label class="fld" style="flex:2; min-width:150px;">Titel<input type="text" id="programm_detKursTitel" value="'+esc(kurs.titel)+'" list="programm_titelList"></label>'+
         '<label class="fld" style="flex:1; min-width:120px;">Dozent:in<input type="text" id="programm_detKursDozent" value="'+esc(kurs.dozent)+'" list="programm_dozentList"></label>'+
@@ -1912,16 +2001,25 @@ function programm_initCollapsibleCards() {
         '<label class="fld">Std/Termin<input type="number" id="programm_detKursStd" value="'+(kurs.std||3)+'" min="0.5" max="8" step="0.5" style="width:84px;"></label>'+
         '<label class="fld">Raum<input type="text" id="programm_detKursRaum" value="'+esc(kurs.raum)+'" style="width:70px;"></label>'+
       '</div>'+
+      '<div class="frow" style="margin-top:8px;">'+
+        '<label class="fld">Honorar €/Std <span style="color:var(--faint);">(opt.)</span><input type="number" id="programm_detKursHon" value="'+(kurs.honorar!=null&&kurs.honorar!==''?kurs.honorar:'')+'" min="0" step="1" placeholder="'+f.honorar+'" style="width:90px;"></label>'+
+        '<label class="fld">Ø-TN <span style="color:var(--faint);">(opt.)</span><input type="number" id="programm_detKursTn" value="'+(kurs.tn!=null&&kurs.tn!==''?kurs.tn:'')+'" min="0" step="0.5" placeholder="'+f.tnWk+'" style="width:74px;"></label>'+
+      '</div>'+
       '<div class="derived">'+
         '<label class="chk"><input type="checkbox" id="programm_detKursInFerien"'+(kurs.inFerien?' checked':'')+'> läuft auch in Ferien</label>'+
         '<label class="chk"><input type="checkbox" id="programm_detKursEingetragen"'+(kurs.eingetragen?' checked':'')+'> Eingetragen</label>'+
       '</div>'+
+      '<div class="detail-db" id="programm_detKursDB"></div>'+
       '<div class="frow" style="margin-top:12px; gap:8px;">'+
         '<button class="add" id="programm_detKursSave" data-id="'+kurs.id+'" data-isnew="'+isNew+'">Übernehmen</button>'+
         '<button id="programm_detKursCancel">Abbrechen</button>'+
       '</div>';
     g('programm_kursDetailForm').innerHTML = h;
     g('programm_kursDetailForm').classList.add('active');
+    updateKursDetailBreakdown();
+    var kform=g('programm_kursDetailForm');
+    kform.removeEventListener('input', updateKursDetailBreakdown);
+    kform.addEventListener('input', updateKursDetailBreakdown);
     
     // Event-Handler (vorherige entfernen, um Duplikate zu vermeiden)
     var saveBtn = g('programm_detKursSave');
@@ -1959,6 +2057,9 @@ function programm_initCollapsibleCards() {
       rec.raum = g('programm_detKursRaum').value;
       rec.inFerien = g('programm_detKursInFerien').checked;
       rec.eingetragen = g('programm_detKursEingetragen').checked;
+      var honVal=g('programm_detKursHon').value, tnVal=g('programm_detKursTn').value;
+      rec.honorar = honVal===''?null:+honVal;
+      rec.tn = tnVal===''?null:+tnVal;
     }
     g('programm_kursDetailForm').classList.remove('active');
     currentEditKurs = null;
@@ -1971,6 +2072,7 @@ function programm_initCollapsibleCards() {
   }
   
   function renderWsDetail(ws, isNew) {
+    var f=fin();
     var h = '<div class="frow">'+
         '<label class="fld" style="flex:2; min-width:150px;">Titel<input type="text" id="programm_detWsTitel" value="'+esc(ws.titel)+'" list="programm_titelList"></label>'+
         '<label class="fld" style="flex:1; min-width:110px;">Dozent:in<input type="text" id="programm_detWsDozent" value="'+esc(ws.dozent)+'" list="programm_dozentList"></label>'+
@@ -1979,6 +2081,8 @@ function programm_initCollapsibleCards() {
         '<label class="fld">Startdatum<input type="date" id="programm_detWsStart" value="'+(ws.start||'')+'"></label>'+
         '<label class="fld">Tage<input type="number" id="programm_detWsTage" value="'+(ws.tage||1)+'" min="1" style="width:70px;"></label>'+
         '<label class="fld">Raum<input type="text" id="programm_detWsRaum" value="'+esc(ws.raum)+'" style="width:70px;"></label>'+
+        '<label class="fld">Honorar €/Std <span style="color:var(--faint);">(opt.)</span><input type="number" id="programm_detWsHon" value="'+(ws.honorar!=null&&ws.honorar!==''?ws.honorar:'')+'" min="0" step="1" placeholder="'+f.honorar+'" style="width:90px;"></label>'+
+        '<label class="fld">Ø-TN <span style="color:var(--faint);">(opt.)</span><input type="number" id="programm_detWsTn" value="'+(ws.tn!=null&&ws.tn!==''?ws.tn:'')+'" min="0" step="0.5" placeholder="'+f.tnWs+'" style="width:74px;"></label>'+
       '</div>'+
       '<div style="margin-top:8px; padding-left:10px; border-left:2px solid var(--line);">'+
         '<div style="font-size:12px; color:var(--muted); margin-bottom:4px;">Tageszeiten:</div>'+
@@ -1987,15 +2091,20 @@ function programm_initCollapsibleCards() {
       '<div class="derived">'+
         '<label class="chk"><input type="checkbox" id="programm_detWsEingetragen"'+(ws.eingetragen?' checked':'')+'> Eingetragen</label>'+
       '</div>'+
+      '<div class="detail-db" id="programm_detWsDB"></div>'+
       '<div class="frow" style="margin-top:12px; gap:8px;">'+
         '<button class="add" id="programm_detWsSave" data-id="'+ws.id+'" data-isnew="'+isNew+'">Übernehmen</button>'+
         '<button id="programm_detWsCancel">Abbrechen</button>'+
       '</div>';
     g('programm_wsDetailForm').innerHTML = h;
     g('programm_wsDetailForm').classList.add('active');
-    
+
     // Tageszeiten-Felder generieren
     renderWsZeiten(ws);
+    updateWsDetailBreakdown();
+    var wform=g('programm_wsDetailForm');
+    wform.removeEventListener('input', updateWsDetailBreakdown);
+    wform.addEventListener('input', updateWsDetailBreakdown);
     
     // Event-Handler (vorherige entfernen, um Duplikate zu vermeiden)
     var saveBtn = g('programm_detWsSave');
@@ -2054,7 +2163,10 @@ function programm_initCollapsibleCards() {
       rec.tage = +g('programm_detWsTage').value || 1;
       rec.raum = g('programm_detWsRaum').value;
       rec.eingetragen = g('programm_detWsEingetragen').checked;
-      
+      var honVal=g('programm_detWsHon').value, tnVal=g('programm_detWsTn').value;
+      rec.honorar = honVal===''?null:+honVal;
+      rec.tn = tnVal===''?null:+tnVal;
+
       // Tageszeiten speichern
       rec.zeiten = [];
       var tage = +g('programm_detWsTage').value || 1;
@@ -2153,6 +2265,102 @@ function programm_initCollapsibleCards() {
       showNotification('Kopieren fehlgeschlagen');
     }
     document.body.removeChild(textarea);
+  }
+
+  // ---- Honorar-/DB-Berechnung (gleiches Modell wie der Standortrechner) ---
+  // Stunden eines Kurses, die im Planjahr liegen (Termine × Std/Termin)
+  function kursYearHours(k){
+    var dates=genDates(k.start, +k.tag, +k.sessions, !!k.inFerien);
+    var h=0; dates.forEach(function(d){ if(d.getFullYear()===state.planjahr) h+=(+k.std); });
+    return h;
+  }
+  // Stunden eines Workshops, die im Planjahr liegen (Σ Tageszeiten)
+  function wsYearHours(w){
+    var dates=getWorkshopDates(w), h=0;
+    if(w.zeiten && w.zeiten.length){
+      dates.forEach(function(d,i){
+        if(d.getFullYear()===state.planjahr && w.zeiten[i]){
+          var v=toMin(w.zeiten[i].von), b=toMin(w.zeiten[i].bis);
+          if(v!==null && b!==null) h+=(b-v)/60;
+        }
+      });
+    }
+    return h;
+  }
+  // Jahres-Finanzannahmen mit Fallbacks
+  function fin(){
+    var c=cur();
+    return {
+      preis:    c.preis!=null?+c.preis:15,
+      honorar:  c.honorar!=null?+c.honorar:48,
+      material: c.material!=null?+c.material:3,
+      tnWk:     c.tnWk!=null?+c.tnWk:8,
+      tnWs:     c.tnWs!=null?+c.tnWs:12
+    };
+  }
+  function calcDB(hours, tn, hon, f){
+    var umsatz=hours*tn*f.preis;
+    var fremd=hours*(hon+f.material);
+    var db=umsatz-fremd;
+    return {hours:hours, tn:tn, hon:hon, umsatz:umsatz, fremd:fremd, db:db, quote:umsatz>0?db/umsatz:0};
+  }
+  function calcKurs(k){
+    var f=fin();
+    var tn=(k.tn!=null && k.tn!=='')?+k.tn:f.tnWk;
+    var hon=(k.honorar!=null && k.honorar!=='')?+k.honorar:f.honorar;
+    return calcDB(kursYearHours(k), tn, hon, f);
+  }
+  function calcWsEntry(w){
+    var f=fin();
+    var tn=(w.tn!=null && w.tn!=='')?+w.tn:f.tnWs;
+    var hon=(w.honorar!=null && w.honorar!=='')?+w.honorar:f.honorar;
+    return calcDB(wsYearHours(w), tn, hon, f);
+  }
+  function pctRound(q){ return Math.round(q*100)+' %'; }
+  // Kompakte Listen-Zelle „DB (Quote)"
+  function dbCell(r){
+    if(r.hours<=0) return '<span style="color:var(--faint);">—</span>';
+    return '<span class="kurs-db"><b class="'+(r.db>=0?'pos':'neg')+'">'+eur(r.db)+'</b> <span class="q">('+pctRound(r.quote)+')</span></span>';
+  }
+  // Volle Aufschlüsselung im Detail-Formular
+  function dbBreakdownHtml(r){
+    return 'Stunden im Jahr: <b>'+nf1.format(r.hours)+'</b> · '+
+      'Umsatz: <b>'+eur(r.umsatz)+'</b> · '+
+      'Fremdleistung: <b>'+eur(r.fremd)+'</b> · '+
+      'DB: <b class="'+(r.db>=0?'pos':'neg')+'">'+eur(r.db)+'</b> · '+
+      'DB-Quote: <b>'+(r.umsatz>0?pctRound(r.quote):'—')+'</b>';
+  }
+  // Live-Aufschlüsselung aus den aktuellen Kurs-Formularwerten
+  function updateKursDetailBreakdown(){
+    var box=g('programm_detKursDB'); if(!box) return;
+    var tmp={
+      start:g('programm_detKursStart').value,
+      tag:+g('programm_detKursTag').value,
+      sessions:+g('programm_detKursSessions').value,
+      std:+g('programm_detKursStd').value,
+      inFerien:g('programm_detKursInFerien').checked,
+      honorar:g('programm_detKursHon').value,
+      tn:g('programm_detKursTn').value
+    };
+    box.innerHTML=dbBreakdownHtml(calcKurs(tmp));
+  }
+  // Live-Aufschlüsselung aus den aktuellen Workshop-Formularwerten
+  function updateWsDetailBreakdown(){
+    var box=g('programm_detWsDB'); if(!box) return;
+    var tage=+g('programm_detWsTage').value||1;
+    var zeiten=[];
+    for(var i=0;i<tage;i++){
+      var vEl=g('programm_detWsVon'+i), bEl=g('programm_detWsBis'+i);
+      zeiten.push({von:vEl?vEl.value:'', bis:bEl?bEl.value:''});
+    }
+    var tmp={
+      start:g('programm_detWsStart').value,
+      tage:tage,
+      zeiten:zeiten,
+      honorar:g('programm_detWsHon').value,
+      tn:g('programm_detWsTn').value
+    };
+    box.innerHTML=dbBreakdownHtml(calcWsEntry(tmp));
   }
 
   // ---- Berechnung --------------------------------------------------------
@@ -2265,6 +2473,7 @@ function programm_initCollapsibleCards() {
     g('programm_b-ws').innerHTML=nf.format(sumWsYear)+' / '+nf.format(cur().sollWs)+' h '+badge(dWs);
     g('programm_b-konf').innerHTML = konf.length? '<span class="neg">'+konf.length+'</span>' : '<span class="pos">0</span>';
     updateFilterBadge();
+    renderDbPreview();
   }
   function updateFilterBadge(){
     var all = cur().kurse.concat(cur().workshops);
@@ -2320,6 +2529,11 @@ function programm_initCollapsibleCards() {
     if(t.id==='programm_planjahr'){ changePlanjahr(+t.value||2027); return; }
     if(t.id==='programm_sollWk'){ cur().sollWk=+t.value||0; recompute(); persist(); return; }
     if(t.id==='programm_sollWs'){ cur().sollWs=+t.value||0; recompute(); persist(); return; }
+    if(t.id==='programm_finPreis'){ cur().preis=+t.value||0; financeChanged(); return; }
+    if(t.id==='programm_finHon'){ cur().honorar=+t.value||0; financeChanged(); return; }
+    if(t.id==='programm_finMat'){ cur().material=+t.value||0; financeChanged(); return; }
+    if(t.id==='programm_finTnWk'){ cur().tnWk=+t.value||0; financeChanged(); return; }
+    if(t.id==='programm_finTnWs'){ cur().tnWs=+t.value||0; financeChanged(); return; }
     var tbl=t.getAttribute&&t.getAttribute('data-t'), id=t.getAttribute&&t.getAttribute('data-id'), f=t.getAttribute&&t.getAttribute('data-f');
     if(!tbl||!id||!f) return;
     var coll = (tbl==='sperr') ? state.sperr : cur()[tbl];
@@ -2368,12 +2582,23 @@ function programm_initCollapsibleCards() {
         c.kurse=JSON.parse(JSON.stringify(s.kurse)).map(function(k){k.id=uid(); return k;});
         c.workshops=JSON.parse(JSON.stringify(s.workshops)).map(function(w){w.id=uid(); return w;});
         c.sollWk=s.sollWk; c.sollWs=s.sollWs;
+        c.preis=s.preis; c.honorar=s.honorar; c.material=s.material; c.tnWk=s.tnWk; c.tnWs=s.tnWs;
       }
     }
-    g('programm_sollWk').value=cur().sollWk;
-    g('programm_sollWs').value=cur().sollWs;
+    fillSollFinanzInputs();
     renderAll();
     persist();
+  }
+  // Soll- und Finanz-Eingabefelder aus dem aktuellen Jahr neu setzen
+  function fillSollFinanzInputs(){
+    var c=cur();
+    g('programm_sollWk').value=c.sollWk;
+    g('programm_sollWs').value=c.sollWs;
+    g('programm_finPreis').value=c.preis;
+    g('programm_finHon').value=c.honorar;
+    g('programm_finMat').value=c.material;
+    g('programm_finTnWk').value=c.tnWk;
+    g('programm_finTnWs').value=c.tnWs;
   }
 
   // Klick-Handler
@@ -2445,8 +2670,7 @@ function programm_initCollapsibleCards() {
           if (data && (data.jahre || data.kurse || data.workshops)) {
             state = normalize(data);
             g('programm_planjahr').value = state.planjahr;
-            g('programm_sollWk').value = cur().sollWk;
-            g('programm_sollWs').value = cur().sollWs;
+            fillSollFinanzInputs();
             renderAll();
             persist();
             showNotification('Import erfolgreich ✓');
@@ -2478,7 +2702,7 @@ function programm_initCollapsibleCards() {
     var name=g('programm_scen').value; if(!name) return; var o=store(); if(!o[name]) return;
     state=normalize(JSON.parse(JSON.stringify(o[name])));
     g('programm_planjahr').value=state.planjahr;
-    g('programm_sollWk').value=cur().sollWk; g('programm_sollWs').value=cur().sollWs;
+    fillSollFinanzInputs();
     renderAll();
     persist();
   });
@@ -2490,8 +2714,7 @@ function programm_initCollapsibleCards() {
     if(!confirm('Auf Startwerte zurücksetzen? Nicht gespeicherte Eingaben gehen verloren.')) return;
     state=freshState();
     g('programm_planjahr').value=state.planjahr;
-    g('programm_sollWk').value=cur().sollWk;
-    g('programm_sollWs').value=cur().sollWs;
+    fillSollFinanzInputs();
     renderAll();
     persist();
   });
@@ -2510,10 +2733,29 @@ function programm_initCollapsibleCards() {
     recompute(); persist();
     showNotification('Soll übernommen: '+nf.format(wk)+' h Kurse · '+nf.format(ws)+' h Workshops');
   });
-  
+
+  // Finanz-Annahmen aus dem Wien-Standortrechner übernehmen
+  g('programm_btnFinVomRechner').addEventListener('click', function(){
+    var pEl=g('wien_price'), hEl=g('wien_hon'), mEl=g('wien_matKurse'),
+        wkTnEl=g('wien_wkTn'), weTnEl=g('wien_weTn'), feTnEl=g('wien_feTn');
+    if(!pEl||!hEl){ showNotification('Wien-Rechner nicht gefunden'); return; }
+    var c=cur();
+    c.preis    = parseFloat(pEl.value)||0;
+    c.honorar  = parseFloat(hEl.value)||0;
+    c.material = mEl?parseFloat(mEl.value)||0:c.material;
+    c.tnWk     = wkTnEl?parseFloat(wkTnEl.value)||0:c.tnWk;
+    // Workshops: Mittel aus Wochenend- und Ferien-TN (beide gibt es im Rechner)
+    if(weTnEl||feTnEl){
+      var vals=[]; if(weTnEl)vals.push(parseFloat(weTnEl.value)||0); if(feTnEl)vals.push(parseFloat(feTnEl.value)||0);
+      c.tnWs = Math.round((vals.reduce(function(a,b){return a+b;},0)/vals.length)*10)/10;
+    }
+    fillSollFinanzInputs();
+    financeChanged();
+    showNotification('Annahmen übernommen: '+nf.format(c.preis)+' €/Std · Honorar '+nf.format(c.honorar)+' €');
+  });
+
   g('programm_planjahr').value = state.planjahr;
-  g('programm_sollWk').value = cur().sollWk;
-  g('programm_sollWs').value = cur().sollWs;
+  fillSollFinanzInputs();
 
   programm_initCollapsibleCards();
   setupSorting();
