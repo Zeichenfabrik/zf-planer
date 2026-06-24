@@ -226,6 +226,11 @@
 .rentbox label{color:var(--muted); font-weight:600;}
 .rentbox .hint{color:var(--muted); font-size:12px;}
 .warn-hint{font-size:11px; color:var(--warn); font-weight:600;}
+.kosten-grid{display:grid; grid-template-columns:1fr; gap:0; margin:10px 0; padding:8px 12px; background:var(--card); border-radius:var(--r);}
+.kosten-row{display:flex; justify-content:space-between; align-items:center; gap:10px; padding:4px 0; border-bottom:1px solid var(--line); font-size:13px;}
+.kosten-row:last-child{border-bottom:none;}
+.kosten-row span{color:var(--muted); flex:1;}
+.kosten-row input{width:88px; text-align:right; font-size:13px; padding:2px 6px;}
 </style>
 </head>
 <body>
@@ -371,14 +376,24 @@
   <h2>Standortkosten &amp; Ergebnis</h2>
   <div class="sub">Standortleitung: heute geringfügig ~6.600 €/J · künftig echte Leitung (Fixum ↑, Beteiligung 8 %)</div>
   <div class="sld"><label>Standortleitung Fixum/J.</label><input type="range" min="0" max="40000" step="200" value="6600" id="wien_fx"><span class="val" id="wien_fx-o"></span></div>
-  <div class="sld"><label>Werbung / Verwaltung</label><input type="range" min="0" max="40000" step="250" value="10000" id="wien_wv"><span class="val" id="wien_wv-o"></span></div>
-  <div class="sld"><label>Betriebskosten/J. (Energie, Reinigung …)</label><input type="range" min="0" max="40000" step="250" value="0" id="wien_betrieb"><span class="val" id="wien_betrieb-o"></span></div>
+  <div class="kosten-grid">
+    <div class="kosten-row"><span>Werbung / Marketing</span><input type="number" id="wien_werbung" value="2500" min="0" step="100"></div>
+    <div class="kosten-row"><span>Steuerberatung / Buchhaltung</span><input type="number" id="wien_steuer" value="5000" min="0" step="100"></div>
+    <div class="kosten-row"><span>Versicherungen</span><input type="number" id="wien_versich" value="900" min="0" step="50"></div>
+    <div class="kosten-row"><span>Software / Lizenzen / Tools</span><input type="number" id="wien_software" value="1200" min="0" step="50"></div>
+    <div class="kosten-row"><span>Telekommunikation</span><input type="number" id="wien_telekom" value="2000" min="0" step="50"></div>
+    <div class="kosten-row"><span>Bank- / Zahlungsdienstleister</span><input type="number" id="wien_bank" value="1200" min="0" step="50"></div>
+    <div class="kosten-row"><span>Kammer / Mitgliedsbeiträge</span><input type="number" id="wien_kammer" value="750" min="0" step="50"></div>
+    <div class="kosten-row"><span>Büromaterial / Sonstiges</span><input type="number" id="wien_buero" value="600" min="0" step="50"></div>
+    <div class="kosten-row"><span>Betriebskosten (Energie, Reinigung)</span><input type="number" id="wien_betrieb" value="4500" min="0" step="100"></div>
+    <div class="kosten-row"><span>Abschreibungen (nicht zahlungswirksam)</span><input type="number" id="wien_afa" value="0" min="0" step="100"></div>
+  </div>
 
   <div style="background:var(--card); border-radius:8px; padding:11px 13px; margin:13px 0 0;">
     <div class="sumrow strong"><span>Summe Deckungsbeiträge</span><span id="wien_g-sumdb"></span></div>
     <div class="sumrow"><span>− Standortleitung (Fixum + Beteiligung)</span><span id="wien_g-lc"></span></div>
-    <div class="sumrow"><span>− Werbung / Verwaltung</span><span id="wien_g-wv"></span></div>
-    <div class="sumrow"><span>− Betriebskosten</span><span id="wien_g-be"></span></div>
+    <div class="sumrow"><span>− Werbung / Marketing</span><span id="wien_g-werbung"></span></div>
+    <div class="sumrow"><span>− Verwaltung &amp; Betrieb</span><span id="wien_g-verwaltung"></span></div>
     <div class="sumrow big"><span>= Ergebnis vor Miete &amp; Entnahme</span><span id="wien_g-ergvor"></span></div>
     <div class="note" id="wien_g-quote"></div>
   </div>
@@ -543,8 +558,18 @@
   <h2>Standortweite Kosten &amp; Gesamtrechnung</h2>
   <div class="sub">&nbsp;</div>
   <div class="sld"><label>Standortleitung Fixum/J.</label><input type="range" min="8000" max="32000" step="250" value="18000" id="graz_fx"><span class="val" id="graz_fx-o"></span></div>
-  <div class="sld"><label>Werbung / Verwaltung</label><input type="range" min="0" max="14000" step="100" value="3500" id="graz_wv"><span class="val" id="graz_wv-o"></span></div>
-  <div class="sld"><label>Betriebskosten/J. (Energie, Reinigung, Internet)</label><input type="range" min="0" max="20000" step="250" value="0" id="graz_betrieb"><span class="val" id="graz_betrieb-o"></span></div>
+  <div class="kosten-grid">
+    <div class="kosten-row"><span>Werbung / Marketing</span><input type="number" id="graz_werbung" value="1500" min="0" step="100"></div>
+    <div class="kosten-row"><span>Steuerberatung / Buchhaltung</span><input type="number" id="graz_steuer" value="2500" min="0" step="100"></div>
+    <div class="kosten-row"><span>Versicherungen</span><input type="number" id="graz_versich" value="500" min="0" step="50"></div>
+    <div class="kosten-row"><span>Software / Lizenzen / Tools</span><input type="number" id="graz_software" value="600" min="0" step="50"></div>
+    <div class="kosten-row"><span>Telekommunikation</span><input type="number" id="graz_telekom" value="800" min="0" step="50"></div>
+    <div class="kosten-row"><span>Bank- / Zahlungsdienstleister</span><input type="number" id="graz_bank" value="400" min="0" step="50"></div>
+    <div class="kosten-row"><span>Kammer / Mitgliedsbeiträge</span><input type="number" id="graz_kammer" value="400" min="0" step="50"></div>
+    <div class="kosten-row"><span>Büromaterial / Sonstiges</span><input type="number" id="graz_buero" value="200" min="0" step="50"></div>
+    <div class="kosten-row"><span>Betriebskosten (Energie, Reinigung)</span><input type="number" id="graz_betrieb" value="2500" min="0" step="100"></div>
+    <div class="kosten-row"><span>Abschreibungen (nicht zahlungswirksam)</span><input type="number" id="graz_afa" value="0" min="0" step="100"></div>
+  </div>
   <div class="nrow">
     <label>Material/Modell €/Std (Kurse)<input type="number" id="graz_matKurse" value="0" min="0" max="20" step="0.5"></label>
   </div>
@@ -552,8 +577,8 @@
   <div style="background:var(--card); border-radius:8px; padding:11px 13px; margin:13px 0 0;">
     <div class="sumrow strong"><span>Summe Deckungsbeiträge (alle Schichten)</span><span id="graz_g-sumdb"></span></div>
     <div class="sumrow"><span>− Standortleitung gesamt (Fixum + 8 % Beteiligung)</span><span id="graz_g-lc"></span></div>
-    <div class="sumrow"><span>− Werbung / Verwaltung</span><span id="graz_g-wv"></span></div>
-    <div class="sumrow"><span>− Betriebskosten</span><span id="graz_g-be"></span></div>
+    <div class="sumrow"><span>− Werbung / Marketing</span><span id="graz_g-werbung"></span></div>
+    <div class="sumrow"><span>− Verwaltung &amp; Betrieb</span><span id="graz_g-verwaltung"></span></div>
     <div class="note" id="graz_g-lcsub"></div>
   </div>
 
@@ -608,10 +633,10 @@
     <div class="pc" id="graz_p1-db"></div><div class="pc" id="graz_p2-db"></div><div class="pc" id="graz_p3-db"></div>
     <div class="pl">− Standortleitung (Fixum + 8 %)</div>
     <div class="pc" id="graz_p1-lc"></div><div class="pc" id="graz_p2-lc"></div><div class="pc" id="graz_p3-lc"></div>
-    <div class="pl">− Werbung / Verwaltung</div>
-    <div class="pc" id="graz_p1-wv"></div><div class="pc" id="graz_p2-wv"></div><div class="pc" id="graz_p3-wv"></div>
-    <div class="pl">− Betriebskosten</div>
-    <div class="pc" id="graz_p1-be2"></div><div class="pc" id="graz_p2-be2"></div><div class="pc" id="graz_p3-be2"></div>
+    <div class="pl">− Werbung / Marketing</div>
+    <div class="pc" id="graz_p1-werbung"></div><div class="pc" id="graz_p2-werbung"></div><div class="pc" id="graz_p3-werbung"></div>
+    <div class="pl">− Verwaltung &amp; Betrieb</div>
+    <div class="pc" id="graz_p1-verwaltung"></div><div class="pc" id="graz_p2-verwaltung"></div><div class="pc" id="graz_p3-verwaltung"></div>
     <div class="pl strong">Vor Miete</div>
     <div class="pc" id="graz_p1-vor"></div><div class="pc" id="graz_p2-vor"></div><div class="pc" id="graz_p3-vor"></div>
     <div class="pl dim" style="color:var(--faint);font-size:12px;">Break-even-Miete/Mon</div>
@@ -866,10 +891,12 @@ document.addEventListener('DOMContentLoaded', function() {
     var totalNet=wk.ums+we.ums+fe.ums+teUms+gUms;
     var sumDB=wk.db+we.db+fe.db+teDB+gDB;
     var bet=betPct*totalNet, lc=v(ov,'wien_fx')+bet;
-    var ergVor=sumDB-lc-v(ov,'wien_wv')-v(ov,'wien_betrieb');
+    var werbung=v(ov,'wien_werbung');
+    var verwaltungSumme=v(ov,'wien_steuer')+v(ov,'wien_versich')+v(ov,'wien_software')+v(ov,'wien_telekom')+v(ov,'wien_bank')+v(ov,'wien_kammer')+v(ov,'wien_buero')+v(ov,'wien_betrieb')+v(ov,'wien_afa');
+    var ergVor=sumDB-lc-werbung-verwaltungSumme;
     var ergNach=ergVor-v(ov,'wien_miete')-v(ov,'wien_entnahme');
     return {wk:wk,we:we,fe:fe,teUms:teUms,teDB:teDB,gUms:gUms,gDB:gDB,
-      totalNet:totalNet,sumDB:sumDB,bet:bet,lc:lc,ergVor:ergVor,ergNach:ergNach,
+      totalNet:totalNet,sumDB:sumDB,bet:bet,lc:lc,werbung:werbung,verwaltungSumme:verwaltungSumme,ergVor:ergVor,ergNach:ergNach,
       quote: totalNet>0? sumDB/totalNet : 0};
   }
 
@@ -905,11 +932,11 @@ document.addEventListener('DOMContentLoaded', function() {
     g('wien_g-q').textContent=R.gUms>0?(R.gDB/R.gUms*100).toFixed(0)+' %':'—';
 
     // Standortkosten
-    g('wien_fx-o').textContent=eur(num('wien_fx')); g('wien_wv-o').textContent=eur(num('wien_wv')); g('wien_betrieb-o').textContent=eur(num('wien_betrieb'));
+    g('wien_fx-o').textContent=eur(num('wien_fx'));
     g('wien_g-sumdb').textContent=eur(R.sumDB);
     g('wien_g-lc').textContent=eurNeg(R.lc);
-    g('wien_g-wv').textContent=eurNeg(num('wien_wv'));
-    g('wien_g-be').textContent=eurNeg(num('wien_betrieb'));
+    g('wien_g-werbung').textContent=eurNeg(R.werbung);
+    g('wien_g-verwaltung').textContent=eurNeg(R.verwaltungSumme);
     g('wien_g-ergvor').textContent=eur(R.ergVor); g('wien_g-ergvor').className=R.ergVor>=0?'':'neg';
     g('wien_g-quote').textContent='Gesamt-DB-Quote '+pct(R.quote)+' · Beteiligung '+eur(R.bet)+' auf '+eur(R.totalNet)+' Nettoumsatz';
     g('wien_g-miete').textContent=eurNeg(num('wien_miete'));
@@ -936,7 +963,7 @@ document.addEventListener('DOMContentLoaded', function() {
   var PERSIST_IDS=['wien_price','wien_hon','wien_matKurse','wien_betPct',
     'wien_wkPs','wien_wkR','wien_wkTn','wien_wkTerm','wien_wkSh','wien_wePs','wien_weR','wien_weTn','wien_weH','wien_fePs','wien_feR','wien_feTn','wien_feH',
     'wien_teEv','wien_teTn','wien_tePrice','wien_teHon','wien_teMat','wien_gUms','wien_gFremd',
-    'wien_fx','wien_wv','wien_betrieb','wien_miete','wien_entnahme'];
+    'wien_fx','wien_werbung','wien_steuer','wien_versich','wien_software','wien_telekom','wien_bank','wien_kammer','wien_buero','wien_betrieb','wien_afa','wien_miete','wien_entnahme'];
   PERSIST_IDS.forEach(function(id){ g(id).addEventListener('input', render); });
 
   var DEFAULTS={}; PERSIST_IDS.forEach(function(id){ DEFAULTS[id]=g(id).value; });
@@ -1108,19 +1135,19 @@ document.addEventListener('DOMContentLoaded', function() {
     g('graz_te-q').textContent=(teRev>0?(teDB/teRev*100).toFixed(0):'0')+' %';
 
     // ---- standortweit ----
-    var fx=num('graz_fx'), wv=num('graz_wv'), betrieb=num('graz_betrieb');
+    var fx=num('graz_fx');
+    var grazWerbung=num('graz_werbung');
+    var grazVerwSum=num('graz_steuer')+num('graz_versich')+num('graz_software')+num('graz_telekom')+num('graz_bank')+num('graz_kammer')+num('graz_buero')+num('graz_betrieb')+num('graz_afa');
     g('graz_fx-o').textContent=eur(fx);
-    g('graz_wv-o').textContent=eur(wv);
-    g('graz_betrieb-o').textContent=eur(betrieb);
     var totalNet=wk.ums+we.ums+fe.ums+nmRev+teRev;
     var beteiligung=BET*totalNet;
     var lc=fx+beteiligung;
     var sumDB=wk.db+we.db+fe.db+nmDB+teDB;
-    var vorMiete=sumDB-lc-wv-betrieb;
+    var vorMiete=sumDB-lc-grazWerbung-grazVerwSum;
     g('graz_g-sumdb').textContent=eur(sumDB);
     g('graz_g-lc').textContent=eurNeg(lc);
-    g('graz_g-wv').textContent=eurNeg(wv);
-    g('graz_g-be').textContent=eurNeg(betrieb);
+    g('graz_g-werbung').textContent=eurNeg(grazWerbung);
+    g('graz_g-verwaltung').textContent=eurNeg(grazVerwSum);
     g('graz_g-lcsub').textContent='Beteiligung '+eur(beteiligung)+' (8 % auf '+eur(totalNet)+' Gesamt-Nettoumsatz)';
 
     // ---- Ergebnisleiste ----
@@ -1159,7 +1186,9 @@ document.addEventListener('DOMContentLoaded', function() {
     var net=wk.ums+we.ums+fe.ums+nm.ums+te.ums;
     var bet=BET*net, lc=fix+bet;
     var db=wk.db+we.db+fe.db+nm.db+te.db;
-    return {net:net, db:db, lc:lc, vor:db-lc-num('graz_wv')-num('graz_betrieb')};
+    var pWerb=num('graz_werbung');
+    var pVerw=num('graz_steuer')+num('graz_versich')+num('graz_software')+num('graz_telekom')+num('graz_bank')+num('graz_kammer')+num('graz_buero')+num('graz_betrieb')+num('graz_afa');
+    return {net:net, db:db, lc:lc, vor:db-lc-pWerb-pVerw, werbung:pWerb, verwSum:pVerw};
   }
   function updateProjection(){
     var cum=0;
@@ -1169,8 +1198,8 @@ document.addEventListener('DOMContentLoaded', function() {
       g('graz_p'+y+'-net').textContent=eur(r.net);
       g('graz_p'+y+'-db').textContent=eur(r.db);
       g('graz_p'+y+'-lc').textContent=eurNeg(r.lc);
-      g('graz_p'+y+'-wv').textContent=eurNeg(num('graz_wv'));
-      g('graz_p'+y+'-be2').textContent=eurNeg(num('graz_betrieb'));
+      g('graz_p'+y+'-werbung').textContent=eurNeg(r.werbung);
+      g('graz_p'+y+'-verwaltung').textContent=eurNeg(r.verwSum);
       g('graz_p'+y+'-vor').textContent=eur(r.vor);
       g('graz_p'+y+'-bem').textContent=r.vor>0?(eur(r.vor/12)+'/M'):'—';
       g('graz_p'+y+'-rent').textContent=eurNeg(12*rent);
@@ -1184,7 +1213,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // ---- alle Eingabe-IDs (für Live-Update + Szenarien) -------------------
   var PERSIST_IDS=['graz_wkPs','graz_wkR','graz_wkTn','graz_wkTerm','graz_wkSh','graz_wePs','graz_weR','graz_weTn','graz_weH',
     'graz_fePs','graz_feR','graz_feTn','graz_feH','graz_nmWalk','graz_nmPrice','graz_nmGuest','graz_nmSess','graz_nmWeeks','graz_nmCap','graz_nmMat',
-    'graz_teEv','graz_teTn','graz_tePrice','graz_teHon','graz_teMat','graz_matKurse','graz_fx','graz_wv','graz_betrieb','graz_rent','graz_m2','graz_ppm',
+    'graz_teEv','graz_teTn','graz_tePrice','graz_teHon','graz_teMat','graz_matKurse','graz_fx','graz_werbung','graz_steuer','graz_versich','graz_software','graz_telekom','graz_bank','graz_kammer','graz_buero','graz_betrieb','graz_afa','graz_rent','graz_m2','graz_ppm',
     'graz_y1Util','graz_y1Walk','graz_y1Ev','graz_y1Fix','graz_y1Rent','graz_y2Util','graz_y2Walk','graz_y2Ev','graz_y2Fix','graz_y2Rent',
     'graz_y3Util','graz_y3Walk','graz_y3Ev','graz_y3Fix','graz_y3Rent'];
   PERSIST_IDS.forEach(function(id){ g(id).addEventListener('input', calc); });
