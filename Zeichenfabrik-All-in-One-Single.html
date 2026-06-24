@@ -705,6 +705,7 @@
     <label class="fld" style="min-width:150px;">Planjahr<input type="number" id="programm_planjahr" value="2027" min="2020" max="2030" step="1"></label>
     <label class="fld" style="min-width:170px;">Wochenkurse Soll (h/Jahr)<input type="number" id="programm_sollWk" value="1000" min="0" step="10"></label>
     <label class="fld" style="min-width:170px;">Workshops Soll (h/Jahr)<input type="number" id="programm_sollWs" value="532" min="0" step="10"></label>
+    <button id="programm_btnSollVomRechner" style="align-self:flex-end;" title="Wochenkurse- und Workshop-Planstunden aus dem Wien-Standortrechner ins Jahres-Soll übertragen">↤ Soll aus Wien-Rechner</button>
   </div>
 </div>
 
@@ -2379,6 +2380,18 @@ function programm_initCollapsibleCards() {
   
   g('programm_btnExport').addEventListener('click', exportJSON);
   g('programm_btnImport').addEventListener('click', importJSON);
+
+  // Soll aus dem Wien-Standortrechner übernehmen (Planstunden je Schicht)
+  g('programm_btnSollVomRechner').addEventListener('click', function(){
+    var wkEl=g('wien_wkPs'), weEl=g('wien_wePs'), feEl=g('wien_fePs');
+    if(!wkEl||!weEl||!feEl){ showNotification('Wien-Rechner nicht gefunden'); return; }
+    var wk=Math.round(parseFloat(wkEl.value)||0);
+    var ws=Math.round((parseFloat(weEl.value)||0)+(parseFloat(feEl.value)||0));
+    cur().sollWk=wk; cur().sollWs=ws;
+    g('programm_sollWk').value=wk; g('programm_sollWs').value=ws;
+    recompute(); persist();
+    showNotification('Soll übernommen: '+nf.format(wk)+' h Kurse · '+nf.format(ws)+' h Workshops');
+  });
   
   g('programm_planjahr').value = state.planjahr;
   g('programm_sollWk').value = cur().sollWk;
