@@ -235,6 +235,16 @@
 .filter-btn{padding:4px 10px; font-size:12px; border-radius:14px; border:1px solid var(--line); background:var(--field); color:var(--ink);}
 .filter-btn.active{background:var(--accent); color:#fff; border-color:var(--accent);}
 .offen-badge{font-size:12px; color:var(--warn); font-weight:600; margin-left:auto;}
+.beleg-table{width:100%; border-collapse:collapse; font-size:12px; margin:8px 0;}
+.beleg-table th,.beleg-table td{padding:6px 8px; border:1px solid var(--line); vertical-align:top;}
+.beleg-table th{background:var(--card); font-weight:600; font-size:11px; color:var(--muted); text-align:center;}
+.beleg-table .beleg-raum{font-weight:600; background:var(--card2); white-space:nowrap; text-align:left;}
+.beleg-table .beleg-konf{background:rgba(168,68,58,0.1);}
+.beleg-entry{font-size:11px; line-height:1.4; margin-bottom:2px;}
+.beleg-entry:last-child{margin-bottom:0;}
+.beleg-ws-list{display:flex; flex-direction:column;}
+.beleg-ws-row{display:grid; grid-template-columns:130px 50px 1fr 1fr; gap:8px; font-size:12px; padding:5px 0; border-bottom:1px solid var(--line);}
+.beleg-ws-row:last-child{border-bottom:none;}
 </style>
 </head>
 <body>
@@ -789,6 +799,18 @@
   </div>
   <button class="add" id="programm_addWs">+ Workshop hinzufügen</button>
   <div class="detail-form" id="programm_wsDetailForm"></div>
+</div>
+
+<!-- RAUM- & ABENDBELEGUNG -->
+<div class="card collapsible collapsed" id="programm_belegungCard">
+  <div class="card-header" onclick="programm_toggleCard('programm_belegungCard')">
+    <h2>Raum- &amp; Abendbelegung</h2>
+    <span class="toggle">▼</span>
+  </div>
+  <div class="card-body">
+    <div class="sub">Wochengitter der Wochenkurse — abgeleitet aus den Kursdaten · rot markiert = zeitliche Doppelbelegung</div>
+    <div id="programm_belegungContent"></div>
+  </div>
 </div>
 
 <!-- SOLL-IST & KONFLIKTE -->
@@ -1784,10 +1806,90 @@ function programm_initCollapsibleCards() {
     });
   }
 
+  function renderBelegung(){
+    var container = g('programm_belegungContent');
+    if(!container) return;
+    var kurse = cur().kurse;
+    var workshops = cur().workshops;
+
+    var raumSet = {};
+    kurse.forEach(function(k){ if((k.raum||'').trim()) raumSet[k.raum.trim()]=1; });
+    var raeume = Object.keys(raumSet).sort();
+
+    if(!raeume.length && !workshops.length){
+      container.innerHTML = '<p style="color:var(--muted);font-size:13px;margin:8px 0;">Keine Räume oder Workshops eingetragen.</p>';
+      return;
+    }
+
+    var WD_LABELS = ['Mo','Di','Mi','Do','Fr','Sa'];
+    var WD_NUMS = [1,2,3,4,5,6];
+
+    // grid[raum][tag] = [{titel, zeitStr, vonMin, bisMin}]
+    var grid = {};
+    raeume.forEach(function(r){
+      grid[r] = {};
+      WD_NUMS.forEach(function(d){ grid[r][d] = []; });
+    });
+    kurse.forEach(function(k){
+      var r = (k.raum||'').trim(); if(!r || !grid[r]) return;
+      var day = +k.tag; if(day<1||day>6) return;
+      var vonMin = toMin(k.zeit);
+      var bisMin = vonMin !== null ? vonMin + (+k.std)*60 : null;
+      var endH = bisMin !== null ? Math.floor(bisMin/60) : null;
+      var endM = bisMin !== null ? bisMin%60 : null;
+      var zeitStr = vonMin !== null && bisMin !== null
+        ? (k.zeit||'?')+'–'+pad(endH)+':'+pad(endM) : (k.zeit||'');
+      grid[r][day].push({titel:k.titel||'?', zeitStr:zeitStr, vonMin:vonMin, bisMin:bisMin});
+    });
+
+    var html = '';
+    if(raeume.length){
+      html += '<div class="table-container"><table class="beleg-table"><thead><tr><th style="text-align:left;">Raum</th>';
+      WD_LABELS.forEach(function(l){ html += '<th>'+l+'</th>'; });
+      html += '</tr></thead><tbody>';
+      raeume.forEach(function(r){
+        html += '<tr><td class="beleg-raum">'+esc(r)+'</td>';
+        WD_NUMS.forEach(function(d){
+          var entries = grid[r][d];
+          var konf = false;
+          for(var i=0;i<entries.length&&!konf;i++){
+            for(var j=i+1;j<entries.length;j++){
+              if(timesOverlap(entries[i].vonMin, entries[i].bisMin, entries[j].vonMin, entries[j].bisMin)){ konf=true; break; }
+            }
+          }
+          html += '<td'+(konf?' class="beleg-konf"':'')+'>';
+          entries.forEach(function(e){ html += '<div class="beleg-entry">'+esc(e.zeitStr)+' '+esc(e.titel)+'</div>'; });
+          html += '</td>';
+        });
+        html += '</tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+
+    if(workshops.length){
+      html += '<p style="font-weight:600;font-size:12px;color:var(--muted);margin:14px 0 6px;">Workshops nach Datum</p>';
+      html += '<div class="beleg-ws-list">';
+      workshops.slice().sort(function(a,b){ return (a.start||'')<(b.start||'')?-1:1; }).forEach(function(w){
+        var dates = getWorkshopDates(w);
+        var dateStr = dates.length ? fmt(dates[0])+(dates.length>1?' – '+fmt(dates[dates.length-1]):'') : '—';
+        var zeitStr = (w.zeiten||[]).map(function(z){return (z.von||'?')+'–'+(z.bis||'?');}).join(' · ');
+        html += '<div class="beleg-ws-row">'+
+          '<span>'+dateStr+'</span>'+
+          '<span style="color:var(--muted)">'+esc(w.raum||'—')+'</span>'+
+          '<span>'+esc(w.titel||'?')+'</span>'+
+          '<span style="color:var(--muted)">'+zeitStr+'</span>'+
+          '</div>';
+      });
+      html += '</div>';
+    }
+    container.innerHTML = html;
+  }
+
   function renderAll(){
     renderSperr();
     renderKurse();
     renderWs();
+    renderBelegung();
     renderFeiertage();
     updateDataLists();
     recompute();
@@ -1861,6 +1963,7 @@ function programm_initCollapsibleCards() {
     g('programm_kursDetailForm').classList.remove('active');
     currentEditKurs = null;
     renderKurse();
+    renderBelegung();
     updateDataLists();
     recompute();
     renderFeiertage();
@@ -1965,6 +2068,7 @@ function programm_initCollapsibleCards() {
     g('programm_wsDetailForm').classList.remove('active');
     currentEditWs = null;
     renderWs();
+    renderBelegung();
     updateDataLists();
     recompute();
     persist();
@@ -2278,8 +2382,8 @@ function programm_initCollapsibleCards() {
     if(del){
       var id=e.target.getAttribute('data-id');
       if(del==='sperr'){ state.sperr=state.sperr.filter(function(r){return r.id!==id;}); renderSperr(); renderFeiertage(); recompute(); }
-      else if(del==='kurse'){ cur().kurse=cur().kurse.filter(function(r){return r.id!==id;}); renderKurse(); updateDataLists(); recompute(); }
-      else { cur().workshops=cur().workshops.filter(function(r){return r.id!==id;}); renderWs(); updateDataLists(); recompute(); }
+      else if(del==='kurse'){ cur().kurse=cur().kurse.filter(function(r){return r.id!==id;}); renderKurse(); renderBelegung(); updateDataLists(); recompute(); }
+      else { cur().workshops=cur().workshops.filter(function(r){return r.id!==id;}); renderWs(); renderBelegung(); updateDataLists(); recompute(); }
       persist();
       return;
     }
