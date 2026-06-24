@@ -231,6 +231,10 @@
 .kosten-row:last-child{border-bottom:none;}
 .kosten-row span{color:var(--muted); flex:1;}
 .kosten-row input{width:88px; text-align:right; font-size:13px; padding:2px 6px;}
+.filter-bar{display:flex; gap:6px; align-items:center; margin:10px 0; flex-wrap:wrap;}
+.filter-btn{padding:4px 10px; font-size:12px; border-radius:14px; border:1px solid var(--line); background:var(--field); color:var(--ink);}
+.filter-btn.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+.offen-badge{font-size:12px; color:var(--warn); font-weight:600; margin-left:auto;}
 </style>
 </head>
 <body>
@@ -721,6 +725,15 @@
     <button class="add" id="programm_addSperr">+ Sperrzeit hinzufügen</button>
     <div class="fhint" id="programm_feiertage" style="margin-top:12px;"></div>
   </div>
+</div>
+
+<!-- STATUS-FILTER -->
+<div class="filter-bar">
+  <button id="programm_fAll" class="filter-btn active">Alle</button>
+  <button id="programm_fOffen" class="filter-btn">Nur offen</button>
+  <button id="programm_fEingetragen" class="filter-btn">Nur eingetragen</button>
+  <span id="programm_offenBadge" class="offen-badge"></span>
+  <button id="programm_btnOffenKopieren">Offene kopieren</button>
 </div>
 
 <!-- WOCHENKURSE -->
@@ -1591,6 +1604,7 @@ function programm_initCollapsibleCards() {
   var currentEditKurs = null;
   var currentEditWs = null;
   var sortState = { kurs: { col: null, asc: true }, ws: { col: null, asc: true } };
+  var filterMode = 'all'; // 'all' | 'offen' | 'eingetragen'
 
   // ---- Rendering --------------------------------------------------------
   function esc(s){ return (s||'').replace(/"/g,'&quot;'); }
@@ -1627,8 +1641,10 @@ function programm_initCollapsibleCards() {
     }
     
     // Tabellenzeilen generieren
+    var toShow = filterMode==='offen' ? sorted.filter(function(k){return !k.eingetragen;})
+      : filterMode==='eingetragen' ? sorted.filter(function(k){return k.eingetragen;}) : sorted;
     var h='';
-    sorted.forEach(function(k){
+    toShow.forEach(function(k){
       var full = genDatesFull(k.start, +k.tag, +k.sessions, !!k.inFerien);
       var dates = full.dates, skipped = full.skipped;
       var totalHours = (+k.sessions) * (+k.std);
@@ -1690,8 +1706,10 @@ function programm_initCollapsibleCards() {
     }
     
     // Tabellenzeilen generieren
+    var toShow = filterMode==='offen' ? sorted.filter(function(w){return !w.eingetragen;})
+      : filterMode==='eingetragen' ? sorted.filter(function(w){return w.eingetragen;}) : sorted;
     var h='';
-    sorted.forEach(function(w){
+    toShow.forEach(function(w){
       var totalHours = getWorkshopTotalHours(w);
       var dates = getWorkshopDates(w);
       var dateInfo = '';
@@ -1953,13 +1971,11 @@ function programm_initCollapsibleCards() {
   }
   
   // ---- Kopieren-Funktionen ----------------------------------------
-  function copyToClipboardKurs(kurs) {
+  function buildKursText(kurs) {
     var full = genDatesFull(kurs.start, +kurs.tag, +kurs.sessions, !!kurs.inFerien);
     var dates = full.dates, skipped = full.skipped;
     var dateStrs = dates.map(function(d) { return fmt(d); });
     var totalHours = (+kurs.sessions) * (+kurs.std);
-
-    // Endzeit berechnen: Startzeit + Std/Termin
     var endZeit = '';
     if (kurs.zeit && kurs.std) {
       var startMin = toMin(kurs.zeit);
@@ -1970,26 +1986,20 @@ function programm_initCollapsibleCards() {
         endZeit = (kurs.zeit||'?') + '–' + pad(endH) + ':' + pad(endM);
       }
     }
-
     var skippedLine = skipped.length>0
       ? 'Unterrichtsfreie Termine: '+skipped.map(function(s){return fmt(s.date)+' ('+s.reason+')';}).join(', ')+'\n'
       : '';
-
-    var text =
-      kurs.titel + ' — Dozent: ' + (kurs.dozent || '?') + '\n' +
+    return kurs.titel + ' — Dozent: ' + (kurs.dozent || '?') + '\n' +
       WD[+kurs.tag] + ' ' + endZeit + ' · Raum ' + (kurs.raum||'?') + '\n' +
       kurs.sessions + ' Termine: ' + dateStrs.join(', ') + '\n' +
       skippedLine +
       nf.format(totalHours) + ' Stunden gesamt';
-
-    copyToClipboard(text);
   }
-  
-  function copyToClipboardWs(ws) {
+  function copyToClipboardKurs(kurs) { copyToClipboard(buildKursText(kurs)); }
+
+  function buildWsText(ws) {
     var dates = getWorkshopDates(ws);
-    var dateStrs = dates.map(function(d) { return fmt(d); });
     var totalHours = getWorkshopTotalHours(ws);
-    
     var zeitenLines = [];
     if (ws.zeiten && ws.zeiten.length > 0) {
       dates.forEach(function(d, i) {
@@ -1998,15 +2008,12 @@ function programm_initCollapsibleCards() {
         }
       });
     }
-    
-    var text = 
-      ws.titel + ' — Dozent: ' + (ws.dozent || '?') + '\n' +
+    return ws.titel + ' — Dozent: ' + (ws.dozent || '?') + '\n' +
       zeitenLines.join(', ') + '\n' +
       'Raum ' + (ws.raum||'?') + '\n' +
       nf.format(totalHours) + ' Stunden gesamt';
-    
-    copyToClipboard(text);
   }
+  function copyToClipboardWs(ws) { copyToClipboard(buildWsText(ws)); }
   
   function copyToClipboard(text) {
     try {
@@ -2153,6 +2160,13 @@ function programm_initCollapsibleCards() {
     g('programm_b-wk').innerHTML=nf.format(sumWkYear)+' / '+nf.format(cur().sollWk)+' h '+badge(dWk);
     g('programm_b-ws').innerHTML=nf.format(sumWsYear)+' / '+nf.format(cur().sollWs)+' h '+badge(dWs);
     g('programm_b-konf').innerHTML = konf.length? '<span class="neg">'+konf.length+'</span>' : '<span class="pos">0</span>';
+    updateFilterBadge();
+  }
+  function updateFilterBadge(){
+    var all = cur().kurse.concat(cur().workshops);
+    var offen = all.filter(function(r){return !r.eingetragen;}).length;
+    var badge = g('programm_offenBadge');
+    if(badge) badge.textContent = offen > 0 ? offen+' von '+all.length+' noch nicht eingetragen' : '';
   }
   function row(label, ist, soll, d){
     var cls = Math.abs(d) <= Math.max(5, soll*0.03) ? 'pos' : (d<0?'warnc':'pos');
@@ -2410,6 +2424,31 @@ function programm_initCollapsibleCards() {
     renderWsDetail(newWs, true);
   });
   
+  // Filter-Buttons
+  ['All','Offen','Eingetragen'].forEach(function(m){
+    var btn = g('programm_f'+m);
+    if(!btn) return;
+    btn.addEventListener('click', function(){
+      filterMode = m.toLowerCase();
+      ['All','Offen','Eingetragen'].forEach(function(n){
+        var b = g('programm_f'+n);
+        if(b) b.classList.toggle('active', n===m);
+      });
+      renderKurse();
+      renderWs();
+    });
+  });
+
+  g('programm_btnOffenKopieren').addEventListener('click', function(){
+    var offKurse = cur().kurse.filter(function(k){return !k.eingetragen;});
+    var offWs = cur().workshops.filter(function(w){return !w.eingetragen;});
+    if(!offKurse.length && !offWs.length){ showNotification('Keine offenen Einträge'); return; }
+    var texts = [];
+    offKurse.forEach(function(k){ texts.push(buildKursText(k)); });
+    offWs.forEach(function(w){ texts.push(buildWsText(w)); });
+    copyToClipboard(texts.join('\n\n'));
+  });
+
   refreshList('');
   renderAll();
 })();
