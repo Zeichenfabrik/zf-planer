@@ -20,13 +20,40 @@ zeichenfabrik-planung/
 
 ## All-in-One App
 
-Für bequemes Umschalten zwischen allen Tools gibt es eine **kombinierte Datei**:
+Für bequemes Umschalten zwischen allen Tools gibt es **zwei kombinierte Dateien**:
+
+### 1. All-in-One mit IFrames (ursprünglich)
 - **Datei:** `Zeichenfabrik-All-in-One.html`
 - **Funktionen:**
   - Tab-Navigation zum Umschalten zwischen den drei Tools
   - Gemeinsames Design (Hell/Dunkel-Modus)
   - Lädt die einzelnen Apps als IFrames
 - **Voraussetzung:** Die drei HTML-Dateien müssen im gleichen Ordner liegen
+- **Hinweis:** Fußzeilen waren in IFrames nicht sichtbar (behoben in Single-File-Version)
+
+### 2. Single-File-App (neu, empfohlen) ⭐
+- **Datei:** `Zeichenfabrik-All-in-One-Single.html`
+- **Version:** v1.0 (2026-06-24)
+- **Funktionen:**
+  - **Native Integration** – Alle drei Tools direkt in einer Datei, **ohne IFrames**
+  - Tab-Navigation zum Umschalten zwischen den Tools
+  - Gemeinsames Design (Hell/Dunkel-Modus)
+  - **Sticky Fußzeilen** für jede App (nur für aktiven Tab sichtbar)
+  - **JSON Export/Import** für alle drei Tools
+  - **Verbesserte Kopieren-Funktion** mit Uhrzeit-Berechnung (z. B. "18:00-21:00")
+  - **Offline-fähig** – Funktioniert mit `file://` Protokoll
+- **Vorteile:**
+  - Keine externen Abhängigkeiten
+  - Keine IFrame-Probleme (Fußzeilen sichtbar)
+  - Einfacher zu verteilen (nur eine Datei)
+  - Schnellere Ladezeit (kein IFrame-Overhead)
+- **Technische Details:**
+  - Alle IDs mit Präfixen: `wien_`, `graz_`, `programm_`
+  - JavaScript-Logik in IIFEs gekapselt
+  - Gemeinsame Helferfunktionen: `g()`, `num()`, `eur()`, `pct()`
+  - Getrennte localStorage-Schlüssel für Szenarien
+
+**Empfehlung:** Verwenden Sie die Single-File-Version (`Zeichenfabrik-All-in-One-Single.html`), da sie alle Funktionen ohne Einschränkungen bietet.
 
 ---
 
@@ -167,6 +194,46 @@ In `projYear` statt `num('wv')` / `num('betrieb')` je Jahr eigene Felder lesen.
 (KV-Einstufung) und Beteiligung% auf 8 setzen. In Wien lässt sich so in einem
 Schritt vom heutigen geringfügigen Stand auf das künftige Modell umstellen –
 am besten als zwei gespeicherte Szenarien („Ist heute" / „Leitung neu").
+
+## Versionshistorie
+
+### Single-File-App (v1.0) – 2026-06-24
+- **Neu:** `Zeichenfabrik-All-in-One-Single.html` – Alle drei Tools in einer Datei
+- Native Integration ohne IFrames
+- Tab-Navigation zum Umschalten zwischen Wien Standortrechner, Graz Standortrechner und Wien Programmplanung
+- Alle IDs mit Präfixen (`wien_`, `graz_`, `programm_`) zur Vermeidung von Konflikten
+- JavaScript-Logik in IIFEs gekapselt
+- Gemeinsame Helferfunktionen: `g()`, `num()`, `eur()`, `pct()`
+- Sticky Fußzeilen für jede App (nur für aktiven Tab sichtbar)
+- JSON Export/Import für alle drei Tools
+- Verbesserte Kopieren-Funktion mit Uhrzeit-Berechnung (z. B. "18:00-21:00")
+
+### All-in-One mit IFrames (v0.2) – 2026-06-24
+- **Neu:** `Zeichenfabrik-All-in-One.html` – Kombinierte Datei mit Tab-Navigation
+- Lädt die drei einzelnen Apps als IFrames
+- Gemeinsames Design (Hell/Dunkel-Modus)
+- Fußzeilen-Höhe angepasst, damit sie in IFrames sichtbar sind
+- Erfordert alle drei HTML-Dateien im gleichen Ordner
+
+### Programmplanung Wien (v1.0) – 2026-06-23
+- **Block 10:** Dokumentation in README.md
+- **Block 9:** JSON Export/Import für Datensicherheit
+- **Block 8:** Konfliktprüfung auf Datumsebene (Raum/Dozent)
+- **Block 7:** "Kopieren"-Button für Kurse und Workshops
+- **Block 6:** Plansoll mit Planjahr + jahresgenaue Soll-Ist-Berechnung
+- **Block 5:** Sperrzeiten ein-/ausklappbar
+- **Block 4:** Schlanke, sortierbare Liste + Detail-Edit-Formulare
+- **Block 3:** "Eingetragen"-Status für Kurse/Workshops
+- **Block 2:** Workshops mehrtägig mit dynamischer Stundenberechnung
+- **Block 1:** Datenmodell mit Planjahr, Eingetragen-Status, Workshop-Struktur
+
+### Standortrechner Wien & Graz (v1.0) – 2026-06-23
+- Ursprüngliche Versionen mit Szenarien-Verwaltung (localStorage)
+- Wien: Hebel-Analyse, Ergebnis vor/nach Miete, DB-Quoten
+- Graz: Mehrjahres-Projektion (J1→J3), Break-even-Miete
+- Gemeinsames Modell: Nettobeträge, Jahreswerte, Deckungsbeitragsrechnung
+
+---
 
 ## Arbeiten mit Claude Code
 
