@@ -187,14 +187,42 @@
 /* ========================================================================
    FUSSZEILEN (für jede App) - nur für aktive Tabs sichtbar
 ======================================================================== */
+/* Tab-Sichtbarkeit */
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+/* Tab-Navigation */
+.tab-header{background:var(--card2); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:100;}
+.tab-nav{max-width:780px; margin:0 auto; padding:0 20px; display:flex; gap:0;}
+.tab-button{padding:12px 18px; font-size:13px; font-weight:600; background:none; border:none; border-bottom:3px solid transparent; border-radius:0; color:var(--muted); cursor:pointer;}
+.tab-button:hover{color:var(--ink); border-color:var(--line);}
+.tab-button.active{color:var(--accent); border-color:var(--accent);}
+
+/* Fußzeilen: nur für aktiven Tab */
 .tab-content .bar{
-  position:fixed; left:0; right:0; bottom:0; 
-  background:var(--card2); border-top:1px solid var(--line); 
+  position:fixed; left:0; right:0; bottom:0;
+  background:var(--card2); border-top:1px solid var(--line);
   box-shadow:0 -2px 14px rgba(0,0,0,0.05); z-index:1000;
 }
-.tab-content:not(.active) .bar{
-  display: none;
-}
+.tab-content:not(.active) .bar{display:none;}
+
+/* Mehrjahres-Projektion (Graz) */
+.proj{display:grid; grid-template-columns:1fr 90px 90px 90px; gap:0; font-size:13px; font-variant-numeric:tabular-nums; min-width:380px;}
+.ph{padding:6px 8px; font-weight:600; font-size:12px; text-align:right; color:var(--muted); border-bottom:1px solid var(--line);}
+.ph.first{text-align:left;}
+.pl{padding:7px 0; font-size:13px; border-bottom:1px solid var(--line); display:flex; align-items:center;}
+.pl.strong{font-weight:600; color:var(--ink);}
+.pi{padding:4px 8px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:flex-end;}
+.pi input{width:74px; text-align:right;}
+.pc{padding:7px 8px; text-align:right; border-bottom:1px solid var(--line); font-family:var(--serif); font-size:14px; display:flex; align-items:center; justify-content:flex-end;}
+.pv{padding:8px 8px; text-align:right; font-family:var(--serif); font-size:16px; font-weight:600; display:flex; align-items:center; justify-content:flex-end;}
+.sep{grid-column:1/-1; height:1px; background:var(--line); margin:4px 0;}
+.cumrow{display:flex; justify-content:space-between; align-items:baseline; margin-top:14px; padding:10px 0 0; border-top:2px solid var(--line); font-variant-numeric:tabular-nums;}
+.cumrow .lab{font-size:13px; color:var(--muted);}
+.cumrow .db{font-family:var(--serif); font-size:20px; font-weight:600;}
+.rentbox{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:14px 0 0; padding:12px 14px; background:var(--card); border-radius:var(--r); font-size:13px;}
+.rentbox label{color:var(--muted); font-weight:600;}
+.rentbox .hint{color:var(--muted); font-size:12px;}
 </style>
 </head>
 <body>
@@ -891,12 +919,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Hebel-Analyse
     var base=R.ergVor;
     function delta(ov){ return computeAll(ov).ergVor - base; }
-    function setH(id, d){ var e=g(id); e.textContent=eurSign(d); e.className='hv '+(d>=0?'pos':'neg'); }
-    setH('h-tn',   delta({wien_wkTn:num('wien_wkTn')+1, wien_weTn:num('wien_weTn')+1, wien_feTn:num('wien_feTn')+1}));
-    setH('h-real', delta({wien_wkR:num('wien_wkR')+5, wien_weR:num('wien_weR')+5, wien_feR:num('wien_feR')+5}));
-    setH('h-room', delta({wien_wkPs:num('wien_wkPs')+336}));
-    setH('h-price',delta({wien_price:num('wien_price')+1}));
-    setH('h-hon',  delta({wien_hon:num('wien_hon')-1}));
+    function setH(id, d){ var e=g(id); if(!e) return; e.textContent=eurSign(d); e.className='hv '+(d>=0?'pos':'neg'); }
+    setH('wien_h-tn',   delta({wien_wkTn:num('wien_wkTn')+1, wien_weTn:num('wien_weTn')+1, wien_feTn:num('wien_feTn')+1}));
+    setH('wien_h-real', delta({wien_wkR:num('wien_wkR')+5, wien_weR:num('wien_weR')+5, wien_feR:num('wien_feR')+5}));
+    setH('wien_h-room', delta({wien_wkPs:num('wien_wkPs')+336}));
+    setH('wien_h-price',delta({wien_price:num('wien_price')+1}));
+    setH('wien_h-hon',  delta({wien_hon:num('wien_hon')-1}));
   }
 
   // ---- Eingabe-IDs (Live-Update, Szenarien, Reset) ----------------------
