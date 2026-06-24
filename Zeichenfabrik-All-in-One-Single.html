@@ -90,12 +90,11 @@
   .detail-form .derived{margin-top:12px; padding-top:8px; border-top:1px solid var(--line);}
 
   /* Aufklappbare Karten (Block 5) */
-  .card.collapsible{position:relative;}
-  .card.collapsible .card-header{cursor:pointer; user-select:none; padding:0; margin:0 0 10px;}
+  .card.collapsible .card-header{cursor:pointer; user-select:none; padding:0; margin:0 0 10px; display:flex; align-items:center; justify-content:space-between;}
   .card.collapsible .card-header h2{margin:0;}
-  .card.collapsible .card-header .toggle{position:absolute; right:15px; top:50%; transform:translateY(-50%); font-size:18px; color:var(--muted);}
+  .card.collapsible .card-header .toggle{position:static; transform:none; font-size:18px; color:var(--muted); flex-shrink:0;}
   .card.collapsible.collapsed .card-body{display:none;}
-  .card.collapsible.collapsed .toggle{transform:translateY(-50%) rotate(-90deg);}
+  .card.collapsible.collapsed .card-header .toggle{transform:rotate(-90deg);}
   .card.collapsible .card-body{padding:0;}
 
   @media print{ .toolbar,.bar,button{display:none;} body{padding-bottom:0;} }
