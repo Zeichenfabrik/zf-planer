@@ -1,0 +1,2203 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zeichenfabrik – All-in-One</title>
+<style>
+/* ========================================================================
+   GEMEINSAMES CSS
+======================================================================== */
+
+  :root{
+    --paper:#FAFAF8; --ink:#1B1B1A; --muted:#6E6B66; --faint:#9A968F;
+    --line:#E6E3DD; --card:#F1EFEA; --card2:#FBFAF7; --field:#FFFFFF;
+    --accent:#36605E; --pos:#2E6B4F; --neg:#A8443A; --warn:#9A6A1B;
+    --serif:Georgia,"Times New Roman",serif;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --r:10px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#15171A; --ink:#ECEAE5; --muted:#9C988F; --faint:#6E6B66;
+      --line:#2A2D31; --card:#1E2125; --card2:#202327; --field:#26292D;
+      --accent:#63ABA3; --pos:#5FB389; --neg:#DA8B81; --warn:#D9AE6A;
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.5; padding:0 0 86px; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:780px; margin:0 auto; padding:32px 20px 24px;}
+  header{margin-bottom:20px;}
+  h1{font-family:var(--serif); font-weight:600; font-size:26px; letter-spacing:-0.01em; margin:0 0 4px;}
+  .lede{color:var(--muted); font-size:14px; margin:0;}
+
+  .toolbar{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:14px 0 4px; padding:10px 12px; background:var(--card); border-radius:var(--r);}
+  .toolbar label{font-size:12px; color:var(--muted);}
+  select,button{font-family:var(--sans); font-size:13px; color:var(--ink); background:var(--field); border:1px solid var(--line); border-radius:7px; padding:6px 10px; cursor:pointer;}
+  button:hover{border-color:var(--accent);}
+  button.add{background:var(--accent); color:#fff; border-color:var(--accent);}
+  button.del{padding:4px 9px; font-size:12px; color:var(--neg);}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:1px;}
+  select{min-width:130px;}
+
+  .card{background:var(--card); border-radius:var(--r); padding:15px 17px; margin:14px 0;}
+  .card h2{font-family:var(--serif); font-weight:600; font-size:16px; margin:0 0 2px;}
+  .card .sub{font-size:12px; color:var(--faint); margin:0 0 12px;}
+
+  input[type=text],input[type=number],input[type=date],input[type=time]{
+    font-family:var(--sans); font-size:13.5px; background:var(--field); border:1px solid var(--line);
+    border-radius:7px; color:var(--ink); height:34px; padding:0 8px; font-variant-numeric:tabular-nums;}
+  label.fld{display:flex; flex-direction:column; gap:3px; font-size:11.5px; color:var(--muted);}
+  label.chk{display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted);}
+
+  .item{background:var(--card2); border:1px solid var(--line); border-radius:9px; padding:11px 12px; margin-bottom:10px;}
+  .frow{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;}
+  .derived{font-size:12.5px; color:var(--muted); margin-top:9px; padding-top:8px; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;}
+  .derived .warn{color:var(--warn);}
+
+  .soll{display:flex; gap:18px; flex-wrap:wrap;}
+  .fhint{font-size:11.5px; color:var(--faint); line-height:1.7;}
+  .konf{font-size:13px; color:var(--neg); margin-top:4px;}
+  .ok{font-size:13px; color:var(--pos);}
+
+  .bar{position:fixed; left:0; right:0; bottom:0; background:var(--card2); border-top:1px solid var(--line); box-shadow:0 -2px 14px rgba(0,0,0,0.05);}
+  .bar .inner{max-width:780px; margin:0 auto; padding:10px 20px; display:flex; gap:22px; align-items:baseline; flex-wrap:wrap;}
+  .bar .item2{display:flex; flex-direction:column; background:none; border:none; padding:0; margin:0;}
+  .bar .k{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;}
+  .bar .v{font-family:var(--serif); font-size:19px; font-weight:600; font-variant-numeric:tabular-nums;}
+  .pos{color:var(--pos);} .neg{color:var(--neg);} .warnc{color:var(--warn);}
+
+  /* Schlanke Liste (Block 4) */
+  .table-container{overflow-x:auto;}
+  table.slim{width:100%; border-collapse:collapse; font-size:13px;}
+  table.slim th, table.slim td{padding:8px 10px; text-align:left; border-bottom:1px solid var(--line);}
+  table.slim th{background:var(--card); font-weight:600; cursor:pointer; user-select:none;}
+  table.slim th:hover{background:var(--card2);}
+  table.slim th.sorted-asc:after{content:' ↑'; color:var(--muted);}
+  table.slim th.sorted-desc:after{content:' ↓'; color:var(--muted);}
+  table.slim tr:hover{background:var(--card2);}
+  table.slim .status{text-align:center;}
+  table.slim .status .dot{display:inline-block; width:12px; height:12px; border-radius:50%; background:var(--pos);}
+  table.slim .status .dot.empty{background:var(--line);}
+  table.slim .actions{white-space:nowrap;}
+  table.slim .actions button{padding:2px 6px; font-size:11px; margin:0 2px;}
+  
+  /* Detail-Formular (aufklappbar) */
+  .detail-form{background:var(--card2); border:1px solid var(--line); border-radius:var(--r); padding:15px; margin-top:10px; display:none;}
+  .detail-form.active{display:block;}
+  .detail-form .frow{margin-bottom:8px;}
+  .detail-form .derived{margin-top:12px; padding-top:8px; border-top:1px solid var(--line);}
+
+  /* Aufklappbare Karten (Block 5) */
+  .card.collapsible{position:relative;}
+  .card.collapsible .card-header{cursor:pointer; user-select:none; padding:0; margin:0 0 10px;}
+  .card.collapsible .card-header h2{margin:0;}
+  .card.collapsible .card-header .toggle{position:absolute; right:15px; top:50%; transform:translateY(-50%); font-size:18px; color:var(--muted);}
+  .card.collapsible.collapsed .card-body{display:none;}
+  .card.collapsible.collapsed .toggle{transform:translateY(-50%) rotate(-90deg);}
+  .card.collapsible .card-body{padding:0;}
+
+  @media print{ .toolbar,.bar,button{display:none;} body{padding-bottom:0;} }
+
+
+/* ========================================================================
+   STANDORTRECHNER CSS (Wien & Graz)
+======================================================================== */
+
+  :root{
+    --paper:#FAFAF8; --ink:#1B1B1A; --muted:#6E6B66; --faint:#9A968F;
+    --line:#E6E3DD; --card:#F1EFEA; --card2:#FBFAF7; --field:#FFFFFF;
+    --accent:#36605E; --pos:#2E6B4F; --neg:#A8443A;
+    --serif:Georgia,"Times New Roman",serif;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --r:10px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#15171A; --ink:#ECEAE5; --muted:#9C988F; --faint:#6E6B66;
+      --line:#2A2D31; --card:#1E2125; --card2:#202327; --field:#26292D;
+      --accent:#63ABA3; --pos:#5FB389; --neg:#DA8B81;
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.5; padding:0 0 92px; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:740px; margin:0 auto; padding:32px 20px 24px;}
+  header{margin-bottom:22px;}
+  h1{font-family:var(--serif); font-weight:600; font-size:27px; letter-spacing:-0.01em; margin:0 0 4px;}
+  .lede{color:var(--muted); font-size:14px; margin:0;}
+
+  .toolbar{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:16px 0 4px; padding:10px 12px; background:var(--card); border-radius:var(--r);}
+  .toolbar label{font-size:12px; color:var(--muted);}
+  select,button{font-family:var(--sans); font-size:13px; color:var(--ink); background:var(--field); border:1px solid var(--line); border-radius:7px; padding:6px 10px; cursor:pointer;}
+  button:hover{border-color:var(--accent);}
+  button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent); outline-offset:1px;}
+  select{min-width:150px;}
+
+  .card{background:var(--card); border-radius:var(--r); padding:15px 17px; margin:14px 0;}
+  .card h2{font-family:var(--serif); font-weight:600; font-size:16px; margin:0;}
+  .card .sub{font-size:12px; color:var(--faint); margin:1px 0 12px;}
+
+  .sld{display:flex; align-items:center; gap:12px; margin-bottom:9px;}
+  .sld > label{font-size:13px; color:var(--muted); min-width:160px;}
+  .sld input[type=range]{flex:1; accent-color:var(--accent);}
+  .sld .val{font-size:13px; font-weight:600; min-width:64px; text-align:right; font-variant-numeric:tabular-nums;}
+
+  .nrow{display:flex; flex-wrap:wrap; gap:18px; margin:10px 0 4px;}
+  .nrow label{display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--muted);}
+  input[type=number]{font-family:var(--sans); font-size:14px; text-align:center; width:90px; height:34px; background:var(--field); border:1px solid var(--line); border-radius:7px; color:var(--ink); font-variant-numeric:tabular-nums;}
+
+  .ftr{margin-top:11px; padding-top:10px; border-top:1px solid var(--line);}
+  .conv{font-size:11.5px; color:var(--faint); margin-bottom:7px;}
+  .brk{display:flex; justify-content:space-between; font-size:13px; color:var(--muted); margin-bottom:3px; font-variant-numeric:tabular-nums;}
+  .dbline{display:flex; justify-content:space-between; align-items:baseline; margin-top:5px;}
+  .dbline .lab{font-size:13px; font-weight:600; color:var(--ink);}
+  .db{font-family:var(--serif); font-size:20px; font-weight:600; font-variant-numeric:tabular-nums;}
+  .q{font-size:12px; color:var(--faint); margin-left:4px;}
+
+  .total{background:var(--card2); border:1px solid var(--line);}
+  .sumrow{display:flex; justify-content:space-between; font-size:13.5px; margin-bottom:4px; font-variant-numeric:tabular-nums;}
+  .sumrow.strong{font-weight:600; color:var(--ink);}
+  .sumrow.big{font-family:var(--serif); font-size:16px; font-weight:600; margin-top:6px;}
+  .note{font-size:11.5px; color:var(--faint); margin-top:3px;}
+
+  .hebrow{display:flex; justify-content:space-between; align-items:baseline; padding:8px 0; border-bottom:1px solid var(--line);}
+  .hebrow:last-child{border-bottom:none;}
+  .hebrow .hl{font-size:13.5px; color:var(--ink);}
+  .hebrow .hv{font-family:var(--serif); font-size:18px; font-weight:600; font-variant-numeric:tabular-nums;}
+
+  .pos{color:var(--pos);} .neg{color:var(--neg);}
+
+  .bar{position:fixed; left:0; right:0; bottom:0; background:var(--card2); border-top:1px solid var(--line); box-shadow:0 -2px 14px rgba(0,0,0,0.05); z-index:1000;}
+  .bar .inner{max-width:740px; margin:0 auto; padding:11px 20px; display:flex; gap:22px; align-items:baseline; flex-wrap:wrap;}
+  .bar .item{display:flex; flex-direction:column;}
+  .bar .item .k{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;}
+  .bar .item .v{font-family:var(--serif); font-size:21px; font-weight:600; font-variant-numeric:tabular-nums;}
+  .bar .spacer{flex:1;}
+
+  @media (max-width:560px){ .sld > label{min-width:120px;} .bar .inner{gap:14px;} .bar .item .v{font-size:18px;} }
+  @media print{ .toolbar,.bar{display:none;} body{padding-bottom:0;} .sld input[type=range]{display:none;} }
+
+
+/* ========================================================================
+   PROGRAMMPLANUNG SPEZIFISCHES CSS
+======================================================================== */
+
+/* ========================================================================
+   FUSSZEILEN (für jede App) - nur für aktive Tabs sichtbar
+======================================================================== */
+.tab-content .bar{
+  position:fixed; left:0; right:0; bottom:0; 
+  background:var(--card2); border-top:1px solid var(--line); 
+  box-shadow:0 -2px 14px rgba(0,0,0,0.05); z-index:1000;
+}
+.tab-content:not(.active) .bar{
+  display: none;
+}
+</style>
+</head>
+<body>
+
+<!-- ========================================================================
+  TAB NAVIGATION
+======================================================================== -->
+<div class="tab-header">
+  <div class="tab-nav">
+    <button class="tab-button active" data-tab="wien-rechner">Wien – Standortrechner</button>
+    <button class="tab-button" data-tab="graz-rechner">Graz – Standortrechner</button>
+    <button class="tab-button" data-tab="wien-programm">Wien – Programmplanung</button>
+  </div>
+</div>
+
+<!-- ========================================================================
+  TAB 1: WIEN STANDORTRECHNER
+======================================================================== -->
+<div id="wien-rechner" class="tab-content active">
+
+<div class="wrap">
+<header>
+  <h1>Zeichenfabrik Wien — Standortrechner</h1>
+  <p class="lede">Kapazitäts- und Hebel-Werkzeug · alle Werte netto (USt 20 % herausgerechnet) · läuft offline</p>
+</header>
+
+<div class="toolbar">
+  <label for="wien_scen">Szenario</label>
+  <select id="wien_scen"><option value="">— gespeicherte —</option></select>
+  <button id="wien_btnLoad">Laden</button>
+  <button id="wien_btnSave">Speichern als …</button>
+  <button id="wien_btnDel">Löschen</button>
+  <span style="flex:1"></span>
+  <button id="wien_btnExport">JSON Export</button>
+  <button id="wien_btnImport">JSON Import</button>
+  <button id="wien_btnReset">Zurücksetzen</button>
+</div>
+
+<!-- GRUNDWERTE -->
+<div class="card">
+  <h2>Grundwerte (gelten für alle Kurse &amp; Workshops)</h2>
+  <div class="sub">zentrale Stellschrauben — wirken auf jede Kursschicht zugleich</div>
+  <div class="nrow">
+    <label>Kurspreis €/Std je TN (netto)<input type="number" id="wien_price" value="15" min="5" max="40" step="0.5"></label>
+    <label>Honorar €/Std<input type="number" id="wien_hon" value="48" min="20" max="90" step="1"></label>
+    <label>Material/Modell €/Std<input type="number" id="wien_matKurse" value="0" min="0" max="20" step="0.5"></label>
+    <label>Umsatzbeteiligung %<input type="number" id="wien_betPct" value="0" min="0" max="15" step="0.5"></label>
+  </div>
+  <div class="note">Alle Preise netto (USt 20 % herausgerechnet). Beteiligung 0 = heutige Lage; 8 = künftiges Leitungsmodell wie Graz.</div>
+</div>
+
+<!-- 1 WOCHENKURSE -->
+<div class="card">
+  <h2>1 · Wochenkurse (Abend Mo–Do + Samstag)</h2>
+  <div class="sub">3 von 5 Räumen bespielt · Puffer für Zusatzkurse vorhanden</div>
+  <div class="sld"><label>Planstunden/Jahr</label><input type="range" min="0" max="1800" step="21" value="1000" id="wien_wkPs"><span class="val" id="wien_wkPs-o"></span></div>
+  <div class="sld"><label>Realisierung</label><input type="range" min="20" max="95" step="1" value="78" id="wien_wkR"><span class="val" id="wien_wkR-o"></span></div>
+  <div class="nrow">
+    <label>Ø-TN<input type="number" id="wien_wkTn" value="8" min="4" max="12" step="0.5"></label>
+    <label>Termine<input type="number" id="wien_wkTerm" value="7" min="1" max="14" step="1"></label>
+    <label>Std/Termin<input type="number" id="wien_wkSh" value="3" min="1" max="5" step="0.5"></label>
+  </div>
+  <div class="ftr">
+    <div class="conv" id="wien_wk-conv"></div>
+    <div class="brk"><span>Umsatz netto</span><span id="wien_wk-ums"></span></div>
+    <div class="brk"><span>− Fremdleistung (Honorar + Material)</span><span id="wien_wk-fr"></span></div>
+    <div class="dbline"><span class="lab">Deckungsbeitrag</span><span><span class="db" id="wien_wk-db"></span><span class="q" id="wien_wk-q"></span></span></div>
+  </div>
+</div>
+
+<!-- 2 WORKSHOPS WE -->
+<div class="card">
+  <h2>2 · Workshops Wochenenden</h2>
+  <div class="sub">Ø 12 Std/Workshop</div>
+  <div class="sld"><label>Planstunden/Jahr</label><input type="range" min="0" max="800" step="12" value="372" id="wien_wePs"><span class="val" id="wien_wePs-o"></span></div>
+  <div class="sld"><label>Realisierung</label><input type="range" min="20" max="95" step="1" value="78" id="wien_weR"><span class="val" id="wien_weR-o"></span></div>
+  <div class="nrow">
+    <label>Ø-TN<input type="number" id="wien_weTn" value="8" min="4" max="14" step="0.5"></label>
+    <label>Std/Workshop<input type="number" id="wien_weH" value="12" min="3" max="30" step="1"></label>
+  </div>
+  <div class="ftr">
+    <div class="conv" id="wien_we-conv"></div>
+    <div class="brk"><span>Umsatz netto</span><span id="wien_we-ums"></span></div>
+    <div class="brk"><span>− Fremdleistung (Honorar + Material)</span><span id="wien_we-fr"></span></div>
+    <div class="dbline"><span class="lab">Deckungsbeitrag</span><span><span class="db" id="wien_we-db"></span><span class="q" id="wien_we-q"></span></span></div>
+  </div>
+</div>
+
+<!-- 3 WORKSHOPS SOMMER -->
+<div class="card">
+  <h2>3 · Workshops Sommer (Juli/August)</h2>
+  <div class="sub">Ø 15 Std/Workshop</div>
+  <div class="sld"><label>Planstunden/Jahr</label><input type="range" min="0" max="500" step="15" value="160" id="wien_fePs"><span class="val" id="wien_fePs-o"></span></div>
+  <div class="sld"><label>Realisierung</label><input type="range" min="20" max="95" step="1" value="78" id="wien_feR"><span class="val" id="wien_feR-o"></span></div>
+  <div class="nrow">
+    <label>Ø-TN<input type="number" id="wien_feTn" value="8" min="4" max="14" step="0.5"></label>
+    <label>Std/Workshop<input type="number" id="wien_feH" value="15" min="3" max="40" step="1"></label>
+  </div>
+  <div class="ftr">
+    <div class="conv" id="wien_fe-conv"></div>
+    <div class="brk"><span>Umsatz netto</span><span id="wien_fe-ums"></span></div>
+    <div class="brk"><span>− Fremdleistung (Honorar + Material)</span><span id="wien_fe-fr"></span></div>
+    <div class="dbline"><span class="lab">Deckungsbeitrag</span><span><span class="db" id="wien_fe-db"></span><span class="q" id="wien_fe-q"></span></span></div>
+  </div>
+</div>
+
+<!-- 4 TEAMEVENTS -->
+<div class="card">
+  <h2>4 · Teamevents (B2B)</h2>
+  <div class="sub">hochmargig · Events/Jahr setzen, um zu rechnen</div>
+  <div class="nrow">
+    <label>Events/Jahr<input type="number" id="wien_teEv" value="0" min="0" max="300" step="1"></label>
+    <label>Ø-TN/Event<input type="number" id="wien_teTn" value="12" min="1" max="40" step="1"></label>
+    <label>Preis/Kopf netto<input type="number" id="wien_tePrice" value="75" min="0" max="350" step="5"></label>
+    <label>Honorar/Event<input type="number" id="wien_teHon" value="400" min="0" max="3000" step="25"></label>
+    <label>Mat./Kopf €<input type="number" id="wien_teMat" value="15" min="0" max="80" step="1"></label>
+  </div>
+  <div class="ftr">
+    <div class="conv" id="wien_te-conv"></div>
+    <div class="brk"><span>Umsatz netto</span><span id="wien_te-ums"></span></div>
+    <div class="brk"><span>− Fremdleistung (Honorar + Material)</span><span id="wien_te-fr"></span></div>
+    <div class="dbline"><span class="lab">Deckungsbeitrag</span><span><span class="db" id="wien_te-db"></span><span class="q" id="wien_te-q"></span></span></div>
+  </div>
+</div>
+
+<!-- 5 GESTALTUNG -->
+<div class="card">
+  <h2>5 · Gestaltungsaufträge</h2>
+  <div class="sub">projektbasiert · Jahreswerte netto</div>
+  <div class="nrow">
+    <label>Umsatz/Jahr netto<input type="number" id="wien_gUms" value="0" min="0" max="300000" step="500"></label>
+    <label>Fremdkosten/Jahr<input type="number" id="wien_gFremd" value="0" min="0" max="300000" step="500"></label>
+  </div>
+  <div class="ftr">
+    <div class="brk"><span>Umsatz netto</span><span id="wien_g-ums"></span></div>
+    <div class="brk"><span>− Fremdkosten</span><span id="wien_g-fr"></span></div>
+    <div class="dbline"><span class="lab">Deckungsbeitrag</span><span><span class="db" id="wien_g-db"></span><span class="q" id="wien_g-q"></span></span></div>
+  </div>
+</div>
+
+<!-- STANDORT & ERGEBNIS -->
+<div class="card total">
+  <h2>Standortkosten &amp; Ergebnis</h2>
+  <div class="sub">Standortleitung: heute geringfügig ~6.600 €/J · künftig echte Leitung (Fixum ↑, Beteiligung 8 %)</div>
+  <div class="sld"><label>Standortleitung Fixum/J.</label><input type="range" min="0" max="40000" step="200" value="6600" id="wien_fx"><span class="val" id="wien_fx-o"></span></div>
+  <div class="sld"><label>Werbung / Verwaltung</label><input type="range" min="0" max="40000" step="250" value="10000" id="wien_wv"><span class="val" id="wien_wv-o"></span></div>
+  <div class="sld"><label>Betriebskosten/J. (Energie, Reinigung …)</label><input type="range" min="0" max="40000" step="250" value="0" id="wien_betrieb"><span class="val" id="wien_betrieb-o"></span></div>
+
+  <div style="background:var(--card); border-radius:8px; padding:11px 13px; margin:13px 0 0;">
+    <div class="sumrow strong"><span>Summe Deckungsbeiträge</span><span id="wien_g-sumdb"></span></div>
+    <div class="sumrow"><span>− Standortleitung (Fixum + Beteiligung)</span><span id="wien_g-lc"></span></div>
+    <div class="sumrow"><span>− Werbung / Verwaltung</span><span id="wien_g-wv"></span></div>
+    <div class="sumrow"><span>− Betriebskosten</span><span id="wien_g-be"></span></div>
+    <div class="sumrow big"><span>= Ergebnis vor Miete &amp; Entnahme</span><span id="wien_g-ergvor"></span></div>
+    <div class="note" id="wien_g-quote"></div>
+  </div>
+
+  <div class="nrow" style="margin-top:13px;">
+    <label>Miete €/Jahr (Transfer an dich)<input type="number" id="wien_miete" value="36000" min="0" step="500" style="width:120px;"></label>
+    <label>Unternehmerlohn/Entnahme €/J.<input type="number" id="wien_entnahme" value="0" min="0" step="500" style="width:120px;"></label>
+  </div>
+  <div style="background:var(--card); border-radius:8px; padding:11px 13px; margin-top:10px;">
+    <div class="sumrow"><span>− Miete</span><span id="wien_g-miete"></span></div>
+    <div class="sumrow"><span>− Unternehmerlohn / Entnahme</span><span id="wien_g-entn"></span></div>
+    <div class="sumrow big"><span>= Ergebnis nach Miete &amp; Entnahme</span><span id="wien_g-ergnach"></span></div>
+  </div>
+</div>
+
+<!-- HEBEL-PANEL -->
+<div class="card">
+  <h2>Hebel-Analyse (Jahreswirkung)</h2>
+  <div class="sub">Wirkung einer einzelnen kleinen Änderung aufs Jahresergebnis — bei den aktuellen Einstellungen, jeweils isoliert</div>
+  <div class="hebrow"><span class="hl">+1 Ø-Teilnehmer (alle Kurse &amp; Workshops)</span><span class="hv" id="wien_h-tn"></span></div>
+  <div class="hebrow"><span class="hl">Auslastung +5 %-Punkte (alle Kurse)</span><span class="hv" id="wien_h-real"></span></div>
+  <div class="hebrow"><span class="hl">+1 Kurs pro Abend (≈ +336 Planstd., mehr Raumnutzung)</span><span class="hv" id="wien_h-room"></span></div>
+  <div class="hebrow"><span class="hl">Kurspreis +1 €/Std je TN</span><span class="hv" id="wien_h-price"></span></div>
+  <div class="hebrow"><span class="hl">Honorar −1 €/Std</span><span class="hv" id="wien_h-hon"></span></div>
+</div>
+
+<p style="font-size:11.5px; color:var(--faint); text-align:center; margin:18px 0 0;">
+  Szenarien werden lokal in diesem Browser gespeichert. Datei frei kopier- und erweiterbar.
+</p>
+</div>
+
+<!-- FIXE ERGEBNISLEISTE -->
+<div class="bar"><div class="inner">
+  <div class="item"><span class="k">Ergebnis vor Miete</span><span class="v" id="wien_b-vor"></span></div>
+  <div class="item"><span class="k">nach Miete &amp; Entnahme</span><span class="v" id="wien_b-nach"></span></div>
+  <div class="spacer"></div>
+  <div class="item"><span class="k">DB-Quote gesamt</span><span class="v" id="wien_b-q"></span></div>
+</div></div>
+
+</div>
+
+<!-- ========================================================================
+  TAB 2: GRAZ STANDORTRECHNER
+======================================================================== -->
+<div id="graz-rechner" class="tab-content">
+
+<div class="wrap">
+<header>
+  <h1>Zeichenfabrik Graz — Standortrechner</h1>
+  <p class="lede">Pilotjahr-Modell · alle Werte netto (USt 20 % herausgerechnet) · läuft offline</p>
+</header>
+
+<div class="toolbar">
+  <label for="graz_scen">Szenario</label>
+  <select id="graz_scen"><option value="">— gespeicherte —</option></select>
+  <button id="graz_btnLoad">Laden</button>
+  <button id="graz_btnSave">Speichern als …</button>
+  <button id="graz_btnDel">Löschen</button>
+  <span style="flex:1"></span>
+  <button id="graz_btnExport">JSON Export</button>
+  <button id="graz_btnImport">JSON Import</button>
+  <button id="graz_btnReset">Zurücksetzen</button>
+</div>
+
+<!-- 1 WOCHENKURSE -->
+<div class="card">
+  <h2>1 · Wochenkurse (Abend, ggf. Vormittag)</h2>
+  <div class="sub">vorgebucht · Portier-Zugang · keine Betreuung</div>
+  <div class="sld"><label>Planstunden/Jahr</label><input type="range" min="0" max="840" step="21" value="420" id="graz_wkPs"><span class="val" id="graz_wkPs-o"></span></div>
+  <div class="sld"><label>Realisierung</label><input type="range" min="20" max="90" step="1" value="50" id="graz_wkR"><span class="val" id="graz_wkR-o"></span></div>
+  <div class="nrow">
+    <label>Ø-TN<input type="number" id="graz_wkTn" value="7" min="4" max="10" step="0.5"></label>
+    <label>Termine<input type="number" id="graz_wkTerm" value="7" min="1" max="14" step="1"></label>
+    <label>Std/Termin<input type="number" id="graz_wkSh" value="3" min="1" max="5" step="0.5"></label>
+  </div>
+  <div class="ftr">
+    <div class="conv" id="graz_wk-conv"></div>
+    <div class="brk"><span>Umsatz netto</span><span id="graz_wk-ums"></span></div>
+    <div class="brk"><span>− Fremdleistung (Honorar + Material)</span><span id="graz_wk-fr"></span></div>
+    <div class="dbline"><span class="lab">Deckungsbeitrag</span><span><span class="db" id="graz_wk-db"></span><span class="q" id="graz_wk-q"></span></span></div>
+  </div>
+</div>
+
+<!-- 2a WORKSHOPS WE -->
+<div class="card">
+  <h2>2a · Workshops Wochenenden</h2>
+  <div class="sub">Wiener Maßstab · Ø 12 Std/Workshop</div>
+  <div class="sld"><label>Planstunden/Jahr</label><input type="range" min="0" max="600" step="12" value="372" id="graz_wePs"><span class="val" id="graz_wePs-o"></span></div>
+  <div class="sld"><label>Realisierung</label><input type="range" min="20" max="90" step="1" value="50" id="graz_weR"><span class="val" id="graz_weR-o"></span></div>
+  <div class="nrow">
+    <label>Ø-TN<input type="number" id="graz_weTn" value="7" min="4" max="12" step="0.5"></label>
+    <label>Std/Workshop<input type="number" id="graz_weH" value="12" min="3" max="30" step="1"></label>
+  </div>
+  <div class="ftr">
+    <div class="conv" id="graz_we-conv"></div>
+    <div class="brk"><span>Umsatz netto</span><span id="graz_we-ums"></span></div>
+    <div class="brk"><span>− Fremdleistung (Honorar + Material)</span><span id="graz_we-fr"></span></div>
+    <div class="dbline"><span class="lab">Deckungsbeitrag</span><span><span class="db" id="graz_we-db"></span><span class="q" id="graz_we-q"></span></span></div>
+  </div>
+</div>
+
+<!-- 2b WORKSHOPS FERIEN -->
+<div class="card">
+  <h2>2b · Workshops Hauptferien (Juli/August)</h2>
+  <div class="sub">länger · Ø 15 Std/Workshop</div>
+  <div class="sld"><label>Planstunden/Jahr</label><input type="range" min="0" max="360" step="15" value="150" id="graz_fePs"><span class="val" id="graz_fePs-o"></span></div>
+  <div class="sld"><label>Realisierung</label><input type="range" min="20" max="90" step="1" value="50" id="graz_feR"><span class="val" id="graz_feR-o"></span></div>
+  <div class="nrow">
+    <label>Ø-TN<input type="number" id="graz_feTn" value="7" min="4" max="12" step="0.5"></label>
+    <label>Std/Workshop<input type="number" id="graz_feH" value="15" min="3" max="40" step="1"></label>
+  </div>
+  <div class="ftr">
+    <div class="conv" id="graz_fe-conv"></div>
+    <div class="brk"><span>Umsatz netto</span><span id="graz_fe-ums"></span></div>
+    <div class="brk"><span>− Fremdleistung (Honorar + Material)</span><span id="graz_fe-fr"></span></div>
+    <div class="dbline"><span class="lab">Deckungsbeitrag</span><span><span class="db" id="graz_fe-db"></span><span class="q" id="graz_fe-q"></span></span></div>
+  </div>
+</div>
+
+<!-- 3 NACHMITTAG -->
+<div class="card">
+  <h2>3 · Nachmittag Mo–Fr — Walk-in-Eventbetrieb</h2>
+  <div class="sub">Kassa von Standortleitung gedeckt · keine Aushilfe</div>
+  <div class="sld"><label>Platz-Auslastung</label><input type="range" min="20" max="100" step="1" value="50" id="graz_nmWalk"><span class="val" id="graz_nmWalk-o"></span></div>
+  <div class="sld"><label>Preis/Kopf (netto)</label><input type="range" min="20" max="100" step="1" value="42" id="graz_nmPrice"><span class="val" id="graz_nmPrice-o"></span></div>
+  <div class="sld"><label>Gastkünstler/Woche</label><input type="range" min="0" max="2500" step="50" value="1000" id="graz_nmGuest"><span class="val" id="graz_nmGuest-o"></span></div>
+  <div class="nrow">
+    <label>Sess./Wo.<input type="number" id="graz_nmSess" value="5" min="0" max="10" step="1"></label>
+    <label>Wochen/J.<input type="number" id="graz_nmWeeks" value="25" min="0" max="48" step="1"></label>
+    <label>Plätze<input type="number" id="graz_nmCap" value="15" min="0" max="25" step="1"></label>
+    <label>Mat./Kopf €<input type="number" id="graz_nmMat" value="8" min="0" max="40" step="1"></label>
+  </div>
+  <div class="ftr">
+    <div class="conv">additiv ab Walk-in <span id="graz_nm-be" style="font-weight:600;color:var(--ink)"></span></div>
+    <div class="brk"><span>Umsatz netto</span><span id="graz_nm-ums"></span></div>
+    <div class="brk"><span>− Fremdleistung (Gast + Material)</span><span id="graz_nm-fr"></span></div>
+    <div class="dbline"><span class="lab">Deckungsbeitrag</span><span><span class="db" id="graz_nm-db"></span><span class="q" id="graz_nm-q"></span></span></div>
+  </div>
+</div>
+
+<!-- 4 TEAMEVENTS (B2B) — Standard 0 Events; einfach Events/Jahr setzen -->
+<div class="card">
+  <h2>4 · Teamevents (B2B)</h2>
+  <div class="sub">hochmargig · Standard 0 — Events/Jahr setzen, um zu rechnen</div>
+  <div class="nrow">
+    <label>Events/Jahr<input type="number" id="graz_teEv" value="0" min="0" max="200" step="1"></label>
+    <label>Ø-TN/Event<input type="number" id="graz_teTn" value="12" min="1" max="40" step="1"></label>
+    <label>Preis/Kopf netto<input type="number" id="graz_tePrice" value="75" min="0" max="350" step="5"></label>
+    <label>Honorar/Event<input type="number" id="graz_teHon" value="400" min="0" max="3000" step="25"></label>
+    <label>Mat./Kopf €<input type="number" id="graz_teMat" value="15" min="0" max="80" step="1"></label>
+  </div>
+  <div class="ftr">
+    <div class="conv" id="graz_te-conv"></div>
+    <div class="brk"><span>Umsatz netto</span><span id="graz_te-ums"></span></div>
+    <div class="brk"><span>− Fremdleistung (Honorar + Material)</span><span id="graz_te-fr"></span></div>
+    <div class="dbline"><span class="lab">Deckungsbeitrag</span><span><span class="db" id="graz_te-db"></span><span class="q" id="graz_te-q"></span></span></div>
+  </div>
+</div>
+
+<!-- GESAMT -->
+<div class="card total">
+  <h2>Standortweite Kosten &amp; Gesamtrechnung</h2>
+  <div class="sub">&nbsp;</div>
+  <div class="sld"><label>Standortleitung Fixum/J.</label><input type="range" min="8000" max="32000" step="250" value="18000" id="graz_fx"><span class="val" id="graz_fx-o"></span></div>
+  <div class="sld"><label>Werbung / Verwaltung</label><input type="range" min="0" max="14000" step="100" value="3500" id="graz_wv"><span class="val" id="graz_wv-o"></span></div>
+  <div class="sld"><label>Betriebskosten/J. (Energie, Reinigung, Internet)</label><input type="range" min="0" max="20000" step="250" value="0" id="graz_betrieb"><span class="val" id="graz_betrieb-o"></span></div>
+  <div class="nrow">
+    <label>Material/Modell €/Std (Kurse)<input type="number" id="graz_matKurse" value="0" min="0" max="20" step="0.5"></label>
+  </div>
+
+  <div style="background:var(--card); border-radius:8px; padding:11px 13px; margin:13px 0 0;">
+    <div class="sumrow strong"><span>Summe Deckungsbeiträge (alle Schichten)</span><span id="graz_g-sumdb"></span></div>
+    <div class="sumrow"><span>− Standortleitung gesamt (Fixum + 8 % Beteiligung)</span><span id="graz_g-lc"></span></div>
+    <div class="sumrow"><span>− Werbung / Verwaltung</span><span id="graz_g-wv"></span></div>
+    <div class="sumrow"><span>− Betriebskosten</span><span id="graz_g-be"></span></div>
+    <div class="note" id="graz_g-lcsub"></div>
+  </div>
+
+  <div class="rentbox">
+    <label>Miete €/Monat</label>
+    <input type="number" id="graz_rent" value="1200" min="0" step="50" style="width:104px;">
+    <span class="hint">ableiten:</span>
+    <input type="number" id="graz_m2" value="140" min="0" step="5" style="width:72px;"><span class="hint">m² ×</span>
+    <input type="number" id="graz_ppm" value="8.5" min="0" step="0.5" style="width:68px;"><span class="hint">€/m²</span>
+    <button id="graz_btnTake">übernehmen</button>
+  </div>
+</div>
+
+<!-- MEHRJAHRES-PROJEKTION -->
+<div class="card">
+  <h2>Mehrjahres-Projektion (Jahr 1 → 3)</h2>
+  <div class="sub">Struktur, Ø-TN und Preise stammen aus den Karten oben (konstant). Auslastung, Fixum und Miete steuerst du je Jahr — so bildest du die Anlaufkurve und die Mietstaffel ab.</div>
+  <div style="overflow-x:auto;">
+  <div class="proj">
+    <div class="ph first"></div><div class="ph">Jahr 1</div><div class="ph">Jahr 2</div><div class="ph">Jahr 3</div>
+
+    <div class="pl">Kurs-Auslastung %</div>
+    <div class="pi"><input type="number" id="graz_y1Util" value="50" min="0" max="100" step="1"></div>
+    <div class="pi"><input type="number" id="graz_y2Util" value="65" min="0" max="100" step="1"></div>
+    <div class="pi"><input type="number" id="graz_y3Util" value="78" min="0" max="100" step="1"></div>
+
+    <div class="pl">Nachmittag Walk-in %</div>
+    <div class="pi"><input type="number" id="graz_y1Walk" value="40" min="0" max="100" step="1"></div>
+    <div class="pi"><input type="number" id="graz_y2Walk" value="55" min="0" max="100" step="1"></div>
+    <div class="pi"><input type="number" id="graz_y3Walk" value="70" min="0" max="100" step="1"></div>
+
+    <div class="pl">Teamevents/Jahr</div>
+    <div class="pi"><input type="number" id="graz_y1Ev" value="0" min="0" max="200" step="1"></div>
+    <div class="pi"><input type="number" id="graz_y2Ev" value="0" min="0" max="200" step="1"></div>
+    <div class="pi"><input type="number" id="graz_y3Ev" value="0" min="0" max="200" step="1"></div>
+
+    <div class="pl">Standortleitung Fixum €</div>
+    <div class="pi"><input type="number" id="graz_y1Fix" value="18000" min="0" step="250"></div>
+    <div class="pi"><input type="number" id="graz_y2Fix" value="20098" min="0" step="250"></div>
+    <div class="pi"><input type="number" id="graz_y3Fix" value="22331" min="0" step="250"></div>
+
+    <div class="pl">Miete €/Monat (Staffel)</div>
+    <div class="pi"><input type="number" id="graz_y1Rent" value="0" min="0" step="50"></div>
+    <div class="pi"><input type="number" id="graz_y2Rent" value="800" min="0" step="50"></div>
+    <div class="pi"><input type="number" id="graz_y3Rent" value="1200" min="0" step="50"></div>
+
+    <div class="sep"></div>
+
+    <div class="pl">Nettoumsatz</div>
+    <div class="pc" id="graz_p1-net"></div><div class="pc" id="graz_p2-net"></div><div class="pc" id="graz_p3-net"></div>
+    <div class="pl">Σ Deckungsbeitrag</div>
+    <div class="pc" id="graz_p1-db"></div><div class="pc" id="graz_p2-db"></div><div class="pc" id="graz_p3-db"></div>
+    <div class="pl">− Standortleitung (Fixum + 8 %)</div>
+    <div class="pc" id="graz_p1-lc"></div><div class="pc" id="graz_p2-lc"></div><div class="pc" id="graz_p3-lc"></div>
+    <div class="pl">− Werbung / Verwaltung</div>
+    <div class="pc" id="graz_p1-wv"></div><div class="pc" id="graz_p2-wv"></div><div class="pc" id="graz_p3-wv"></div>
+    <div class="pl">− Betriebskosten</div>
+    <div class="pc" id="graz_p1-be2"></div><div class="pc" id="graz_p2-be2"></div><div class="pc" id="graz_p3-be2"></div>
+    <div class="pl strong">Vor Miete</div>
+    <div class="pc" id="graz_p1-vor"></div><div class="pc" id="graz_p2-vor"></div><div class="pc" id="graz_p3-vor"></div>
+    <div class="pl dim" style="color:var(--faint);font-size:12px;">Break-even-Miete/Mon</div>
+    <div class="pc dim" id="graz_p1-bem"></div><div class="pc dim" id="graz_p2-bem"></div><div class="pc dim" id="graz_p3-bem"></div>
+    <div class="pl">− Miete (× 12)</div>
+    <div class="pc" id="graz_p1-rent"></div><div class="pc" id="graz_p2-rent"></div><div class="pc" id="graz_p3-rent"></div>
+
+    <div class="sep"></div>
+
+    <div class="pl strong">= Betriebsergebnis</div>
+    <div class="pv" id="graz_p1-erg"></div><div class="pv" id="graz_p2-erg"></div><div class="pv" id="graz_p3-erg"></div>
+  </div>
+  </div>
+  <div class="cumrow">
+    <span class="lab">Kumuliertes Betriebsergebnis Jahr 1–3</span>
+    <span class="db" id="graz_p-cum"></span>
+  </div>
+</div>
+
+<p style="font-size:11.5px; color:var(--faint); text-align:center; margin:18px 0 0;">
+  Szenarien werden lokal in diesem Browser gespeichert. Datei frei kopier- und erweiterbar.
+</p>
+</div>
+
+<!-- FIXE ERGEBNISLEISTE -->
+<div class="bar"><div class="inner">
+  <div class="item"><span class="k">Vor Miete gesamt</span><span class="v" id="graz_b-vm"></span></div>
+  <div class="item"><span class="k">Break-even-Miete</span><span class="v" id="graz_b-be"></span></div>
+  <div class="spacer"></div>
+  <div class="item"><span class="k">Ergebnis Jahr 1</span><span class="v" id="graz_b-erg"></span></div>
+</div></div>
+
+</div>
+
+<!-- ========================================================================
+  TAB 3: WIEN PROGRAMMPLANUNG
+======================================================================== -->
+<div id="wien-programm" class="tab-content">
+
+<div class="wrap">
+<header>
+  <h1>Zeichenfabrik Wien — Programmplanung</h1>
+  <p class="lede">Stundenplan-Entwurf · Soll-Ist zum Plansoll · feiertags- und ferienbewusst · läuft offline</p>
+</header>
+
+<div class="toolbar">
+  <label for="programm_scen">Szenario</label>
+  <select id="programm_scen"><option value="">— gespeicherte —</option></select>
+  <button id="programm_btnLoad">Laden</button>
+  <button id="programm_btnSave">Speichern als …</button>
+  <button id="programm_btnDel">Löschen</button>
+  <span style="flex:1"></span>
+  <button id="programm_btnExport">JSON Export</button>
+  <button id="programm_btnImport">JSON Import</button>
+  <button id="programm_btnReset">Zurücksetzen</button>
+</div>
+
+<!-- PLANSOLL -->
+<div class="card">
+  <h2>Plansoll (aus dem Standortrechner)</h2>
+  <div class="sub">Zielstunden je Schicht — hier eintragen, was der Rechner vorgibt</div>
+  <div class="soll">
+    <label class="fld" style="min-width:150px;">Planjahr<input type="number" id="programm_planjahr" value="2026" min="2020" max="2030" step="1"></label>
+    <label class="fld" style="min-width:170px;">Wochenkurse Soll (h/Jahr)<input type="number" id="programm_sollWk" value="1000" min="0" step="10"></label>
+    <label class="fld" style="min-width:170px;">Workshops Soll (h/Jahr)<input type="number" id="programm_sollWs" value="532" min="0" step="10"></label>
+  </div>
+</div>
+
+<!-- SPERRZEITEN -->
+<div class="card collapsible" id="programm_sperrCard">
+  <div class="card-header" onclick="programm_toggleCard('sperrCard')">
+    <h2>Sperrzeiten (Ferien &amp; Schließzeiten)</h2>
+    <span class="toggle">▼</span>
+  </div>
+  <div class="card-body">
+    <div class="sub">blockieren Wochenkurs-Termine — Grenzen frei editierbar · Workshops sind ausgenommen</div>
+    <div id="programm_sperrList"></div>
+    <button class="add" id="programm_addSperr">+ Sperrzeit hinzufügen</button>
+    <div class="fhint" id="programm_feiertage" style="margin-top:12px;"></div>
+  </div>
+</div>
+
+<!-- WOCHENKURSE -->
+<div class="card">
+  <h2>Wochenkurse</h2>
+  <div class="sub">wöchentlich · setzen an Feiertagen &amp; Ferien aus (verschieben sich nach hinten)</div>
+  <div class="table-container">
+    <table class="slim" id="programm_kursTable">
+      <thead>
+        <tr>
+          <th data-sort="titel">Titel</th>
+          <th data-sort="dozent">Dozent</th>
+          <th data-sort="tag">Tag</th>
+          <th data-sort="zeit">Uhrzeit</th>
+          <th data-sort="start">Start</th>
+          <th data-sort="sessions">Termine</th>
+          <th data-sort="std">Std/Termin</th>
+          <th data-sort="raum">Raum</th>
+          <th data-sort="total">Stunden ges.</th>
+          <th data-sort="ende">Ende</th>
+          <th class="status">Status</th>
+          <th class="actions">Aktionen</th>
+        </tr>
+      </thead>
+      <tbody id="programm_kursList"></tbody>
+    </table>
+  </div>
+  <button class="add" id="programm_addKurs">+ Kurs hinzufügen</button>
+  <div class="detail-form" id="programm_kursDetailForm"></div>
+</div>
+
+<!-- WORKSHOPS -->
+<div class="card">
+  <h2>Workshops</h2>
+  <div class="sub">feste Blocktermine · von Sperrzeiten ausgenommen</div>
+  <div class="table-container">
+    <table class="slim" id="programm_wsTable">
+      <thead>
+        <tr>
+          <th data-sort="titel">Titel</th>
+          <th data-sort="dozent">Dozent</th>
+          <th data-sort="start">Start</th>
+          <th data-sort="tage">Tage</th>
+          <th data-sort="zeiten">Uhrzeiten</th>
+          <th data-sort="raum">Raum</th>
+          <th data-sort="total">Stunden ges.</th>
+          <th class="status">Status</th>
+          <th class="actions">Aktionen</th>
+        </tr>
+      </thead>
+      <tbody id="programm_wsList"></tbody>
+    </table>
+  </div>
+  <button class="add" id="programm_addWs">+ Workshop hinzufügen</button>
+  <div class="detail-form" id="programm_wsDetailForm"></div>
+</div>
+
+<!-- SOLL-IST & KONFLIKTE -->
+<div class="card" style="background:var(--card2); border:1px solid var(--line);">
+  <h2>Soll-Ist-Abgleich &amp; Konflikte</h2>
+  <div class="sub">für das Planjahr <strong id="programm_abgleichJahr"></strong></div>
+  <div id="programm_abgleich"></div>
+  <div id="programm_konflikte" style="margin-top:10px;"></div>
+</div>
+
+<p style="font-size:11.5px; color:var(--faint); text-align:center; margin:18px 0 0;">
+  Schulautonome Tage &amp; Fenstertage variieren je Schule — Ferien ggf. gegen den eigenen Kalender abgleichen.<br>
+  Szenarien werden lokal im Browser gespeichert. Datei frei kopier- und erweiterbar.
+</p>
+</div>
+
+<div class="bar"><div class="inner">
+  <div class="item2"><span class="k">Wochenkurse Ist / Soll</span><span class="v" id="programm_b-wk"></span></div>
+  <div class="item2"><span class="k">Workshops Ist / Soll</span><span class="v" id="programm_b-ws"></span></div>
+  <span style="flex:1"></span>
+  <div class="item2"><span class="k">Konflikte</span><span class="v" id="programm_b-konf"></span></div>
+</div></div>
+
+</div>
+
+<script>
+// ========================================================================
+// GEMEINSAME HELFERFUNKTIONEN
+// ========================================================================
+
+// Formatierungsfunktionen
+var nf = new Intl.NumberFormat('de-DE', {maximumFractionDigits:0});
+var nf1 = new Intl.NumberFormat('de-DE', {maximumFractionDigits:1});
+
+function eur(n) {
+  var r = Math.round(n);
+  return (r < 0 ? '\u2212' : '') + nf.format(Math.abs(r)) + ' \u20AC';
+}
+
+function eurNeg(n) {
+  return '\u2212' + nf.format(Math.round(Math.abs(n))) + ' \u20AC';
+}
+
+function eurSign(n) {
+  return (n >= 0 ? '+' : '\u2212') + nf.format(Math.round(Math.abs(n))) + ' \u20AC';
+}
+
+function pct(x) {
+  return (x * 100).toFixed(0) + ' %';
+}
+
+// DOM-Helfer
+function g(id) {
+  return document.getElementById(id);
+}
+
+function num(id) {
+  var el = g(id);
+  return el ? parseFloat(el.value) || 0 : 0;
+}
+
+// ========================================================================
+// TAB NAVIGATION
+// ========================================================================
+document.addEventListener('DOMContentLoaded', function() {
+  var tabButtons = document.querySelectorAll('.tab-button');
+  var tabContents = document.querySelectorAll('.tab-content');
+  
+  tabButtons.forEach(function(button) {
+    button.addEventListener('click', function() {
+      var tabId = this.getAttribute('data-tab');
+      
+      // Deactivate all
+      tabButtons.forEach(function(btn) { btn.classList.remove('active'); });
+      tabContents.forEach(function(content) { content.classList.remove('active'); });
+      
+      // Activate selected
+      this.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    });
+  });
+});
+
+// ========================================================================
+// WIEN STANDORTRECHNER
+// ========================================================================
+
+"use strict";
+(function(){
+  var nf=new Intl.NumberFormat('de-DE',{maximumFractionDigits:0});
+  var nf1=new Intl.NumberFormat('de-DE',{maximumFractionDigits:1});
+  function eur(n){var r=Math.round(n);return (r<0?'−':'')+nf.format(Math.abs(r))+' €';}
+  function eurNeg(n){return '−'+nf.format(Math.round(Math.abs(n)))+' €';}
+  function eurSign(n){return (n>=0?'+':'−')+nf.format(Math.round(Math.abs(n)))+' €';}
+  function g(id){return document.getElementById(id);}
+  function num(id){return parseFloat(g(id).value)||0;}
+
+  // ---- zentrale Rechnung; ov = optionale Overrides (für Hebel-Analyse) --
+  function v(ov,id){ return (id in ov)? ov[id] : num(id); }
+  function computeAll(ov){
+    ov=ov||{};
+    var price=v(ov,'wien_price'), hon=v(ov,'wien_hon'), matH=v(ov,'wien_matKurse'), betPct=v(ov,'wien_betPct')/100;
+    function course(ps,r,tn){
+      var realH=v(ov,ps)*v(ov,r)/100;
+      var ums=realH*v(ov,tn)*price;
+      return {ums:ums, db:ums-realH*(hon+matH), realH:realH};
+    }
+    var wk=course('wkPs','wkR','wkTn');
+    var we=course('wePs','weR','weTn');
+    var fe=course('fePs','feR','feTn');
+    var ev=v(ov,'wien_teEv');
+    var teUms=ev*v(ov,'wien_teTn')*v(ov,'wien_tePrice');
+    var teDB=teUms-ev*(v(ov,'wien_teHon')+v(ov,'wien_teTn')*v(ov,'wien_teMat'));
+    var gUms=v(ov,'wien_gUms'), gDB=gUms-v(ov,'wien_gFremd');
+    var totalNet=wk.ums+we.ums+fe.ums+teUms+gUms;
+    var sumDB=wk.db+we.db+fe.db+teDB+gDB;
+    var bet=betPct*totalNet, lc=v(ov,'wien_fx')+bet;
+    var ergVor=sumDB-lc-v(ov,'wien_wv')-v(ov,'wien_betrieb');
+    var ergNach=ergVor-v(ov,'wien_miete')-v(ov,'wien_entnahme');
+    return {wk:wk,we:we,fe:fe,teUms:teUms,teDB:teDB,gUms:gUms,gDB:gDB,
+      totalNet:totalNet,sumDB:sumDB,bet:bet,lc:lc,ergVor:ergVor,ergNach:ergNach,
+      quote: totalNet>0? sumDB/totalNet : 0};
+  }
+
+  function pct(x){return (x*100).toFixed(0)+' %';}
+
+  function render(){
+    var R=computeAll({});
+    // Schicht-Anzeigen
+    var wkHpc=num('wien_wkTerm')*num('wien_wkSh');
+    g('wien_wkPs-o').textContent=num('wien_wkPs')+' h'; g('wien_wkR-o').textContent=pct(num('wien_wkR')/100);
+    g('wien_wk-conv').textContent='→ '+nf1.format(wkHpc>0?num('wien_wkPs')/wkHpc:0).replace('.',',')+' Kurse/Jahr · realisiert '+nf.format(Math.round(R.wk.realH))+' h';
+    g('wien_wk-ums').textContent=eur(R.wk.ums); g('wien_wk-fr').textContent=eurNeg(R.wk.ums-R.wk.db);
+    g('wien_wk-db').textContent=eur(R.wk.db); g('wien_wk-q').textContent=R.wk.ums>0?(R.wk.db/R.wk.ums*100).toFixed(0)+' %':'0 %';
+
+    g('wien_wePs-o').textContent=num('wien_wePs')+' h'; g('wien_weR-o').textContent=pct(num('wien_weR')/100);
+    g('wien_we-conv').textContent='→ '+nf1.format(num('wien_weH')>0?num('wien_wePs')/num('wien_weH'):0).replace('.',',')+' Workshops/Jahr · realisiert '+nf.format(Math.round(R.we.realH))+' h';
+    g('wien_we-ums').textContent=eur(R.we.ums); g('wien_we-fr').textContent=eurNeg(R.we.ums-R.we.db);
+    g('wien_we-db').textContent=eur(R.we.db); g('wien_we-q').textContent=R.we.ums>0?(R.we.db/R.we.ums*100).toFixed(0)+' %':'0 %';
+
+    g('wien_fePs-o').textContent=num('wien_fePs')+' h'; g('wien_feR-o').textContent=pct(num('wien_feR')/100);
+    g('wien_fe-conv').textContent='→ '+nf1.format(num('wien_feH')>0?num('wien_fePs')/num('wien_feH'):0).replace('.',',')+' Workshops/Jahr · realisiert '+nf.format(Math.round(R.fe.realH))+' h';
+    g('wien_fe-ums').textContent=eur(R.fe.ums); g('wien_fe-fr').textContent=eurNeg(R.fe.ums-R.fe.db);
+    g('wien_fe-db').textContent=eur(R.fe.db); g('wien_fe-q').textContent=R.fe.ums>0?(R.fe.db/R.fe.ums*100).toFixed(0)+' %':'0 %';
+
+    var ev=num('wien_teEv');
+    g('wien_te-conv').textContent=ev>0?('→ '+ev+' Events/Jahr · Ø '+num('wien_teTn')+' TN'):'inaktiv — Events/Jahr auf > 0 setzen';
+    g('wien_te-ums').textContent=eur(R.teUms); g('wien_te-fr').textContent=eurNeg(R.teUms-R.teDB);
+    g('wien_te-db').textContent=eur(R.teDB); g('wien_te-db').className='db '+(R.teDB>=0?'':'neg');
+    g('wien_te-q').textContent=R.teUms>0?(R.teDB/R.teUms*100).toFixed(0)+' %':'0 %';
+
+    g('wien_g-ums').textContent=eur(R.gUms); g('wien_g-fr').textContent=eurNeg(R.gUms-R.gDB);
+    g('wien_g-db').textContent=eur(R.gDB); g('wien_g-db').className='db '+(R.gDB>=0?'':'neg');
+    g('wien_g-q').textContent=R.gUms>0?(R.gDB/R.gUms*100).toFixed(0)+' %':'—';
+
+    // Standortkosten
+    g('wien_fx-o').textContent=eur(num('wien_fx')); g('wien_wv-o').textContent=eur(num('wien_wv')); g('wien_betrieb-o').textContent=eur(num('wien_betrieb'));
+    g('wien_g-sumdb').textContent=eur(R.sumDB);
+    g('wien_g-lc').textContent=eurNeg(R.lc);
+    g('wien_g-wv').textContent=eurNeg(num('wien_wv'));
+    g('wien_g-be').textContent=eurNeg(num('wien_betrieb'));
+    g('wien_g-ergvor').textContent=eur(R.ergVor); g('wien_g-ergvor').className=R.ergVor>=0?'':'neg';
+    g('wien_g-quote').textContent='Gesamt-DB-Quote '+pct(R.quote)+' · Beteiligung '+eur(R.bet)+' auf '+eur(R.totalNet)+' Nettoumsatz';
+    g('wien_g-miete').textContent=eurNeg(num('wien_miete'));
+    g('wien_g-entn').textContent=eurNeg(num('wien_entnahme'));
+    g('wien_g-ergnach').textContent=eur(R.ergNach); g('wien_g-ergnach').className=R.ergNach>=0?'':'neg';
+
+    // Ergebnisleiste
+    g('wien_b-vor').textContent=eur(R.ergVor); g('wien_b-vor').className='v '+(R.ergVor>=0?'':'neg');
+    g('wien_b-nach').textContent=eur(R.ergNach); g('wien_b-nach').className='v '+(R.ergNach>=0?'':'neg');
+    g('wien_b-q').textContent=pct(R.quote);
+
+    // Hebel-Analyse
+    var base=R.ergVor;
+    function delta(ov){ return computeAll(ov).ergVor - base; }
+    function setH(id, d){ var e=g(id); e.textContent=eurSign(d); e.className='hv '+(d>=0?'pos':'neg'); }
+    setH('h-tn',   delta({wkTn:num('wien_wkTn')+1, weTn:num('wien_weTn')+1, feTn:num('wien_feTn')+1}));
+    setH('h-real', delta({wkR:num('wien_wkR')+5, weR:num('wien_weR')+5, feR:num('wien_feR')+5}));
+    setH('h-room', delta({wkPs:num('wien_wkPs')+336}));
+    setH('h-price',delta({price:num('wien_price')+1}));
+    setH('h-hon',  delta({hon:num('wien_hon')-1}));
+  }
+
+  // ---- Eingabe-IDs (Live-Update, Szenarien, Reset) ----------------------
+  var PERSIST_IDS=['price','hon','matKurse','betPct',
+    'wkPs','wkR','wkTn','wkTerm','wkSh','wePs','weR','weTn','weH','fePs','feR','feTn','feH',
+    'teEv','teTn','tePrice','teHon','teMat','gUms','gFremd',
+    'fx','wv','betrieb','miete','entnahme'];
+  PERSIST_IDS.forEach(function(id){ g(id).addEventListener('input', render); });
+
+  var DEFAULTS={}; PERSIST_IDS.forEach(function(id){ DEFAULTS[id]=g(id).value; });
+  g('wien_btnReset').addEventListener('click', function(){
+    PERSIST_IDS.forEach(function(id){ g(id).value=DEFAULTS[id]; }); render();
+  });
+
+  // ---- Szenarien (localStorage; still degradierend falls nicht verfügbar) ----
+  var KEY='zf_wien_zf_wien_scenarios_v1';
+  function loadStore(){ try{ return JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ return {}; } }
+  function saveStore(o){ try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(e){} }
+  function refreshList(sel){
+    var o=loadStore(), s=g('wien_scen');
+    s.innerHTML='<option value="">— gespeicherte —</option>';
+    Object.keys(o).sort().forEach(function(n){
+      var op=document.createElement('option'); op.value=n; op.textContent=n;
+      if(n===sel) op.selected=true; s.appendChild(op);
+    });
+  }
+  g('wien_btnSave').addEventListener('click', function(){
+    var name=prompt('Szenario-Name (z. B. „Ist heute" / „Leitung neu" / „Ziel"):');
+    if(!name) return;
+    var o=loadStore(), data={};
+    PERSIST_IDS.forEach(function(id){ data[id]=g(id).value; });
+    o[name]=data; saveStore(o); refreshList(name);
+  });
+  g('wien_btnLoad').addEventListener('click', function(){
+    var name=g('wien_scen').value; if(!name) return;
+    var o=loadStore(); if(!o[name]) return;
+    PERSIST_IDS.forEach(function(id){ if(o[name][id]!==undefined) g(id).value=o[name][id]; });
+    render();
+  });
+  g('wien_btnDel').addEventListener('click', function(){
+    var name=g('wien_scen').value; if(!name) return;
+    if(!confirm('Szenario „'+name+'" löschen?')) return;
+    var o=loadStore(); delete o[name]; saveStore(o); refreshList('');
+  });
+
+  // ---- JSON Export/Import --------------------------------------------------
+  function exportJSON() {
+    var data = {};
+    PERSIST_IDS.forEach(function(id){ data[id] = g(id).value; });
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'wien_zf-wien-standortrechner.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function importJSON() {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.addEventListener('change', function(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          var data = JSON.parse(e.target.result);
+          // Validierung: Prüfe ob die Daten die erwarteten IDs haben
+          var valid = true;
+          for (var key in data) {
+            if (PERSIST_IDS.indexOf(key) === -1) {
+              valid = false;
+              break;
+            }
+          }
+          if (valid) {
+            PERSIST_IDS.forEach(function(id){ 
+              if (data[id] !== undefined) g(id).value = data[id]; 
+            });
+            render();
+          } else {
+            alert('Ungültige JSON-Datei: Unbekannte Felder gefunden.');
+          }
+        } catch (e) {
+          alert('Fehler beim Import: ' + e.message);
+        }
+      };
+      reader.readAsText(file);
+    });
+    input.click();
+  }
+
+  g('wien_btnExport').addEventListener('click', exportJSON);
+  g('wien_btnImport').addEventListener('click', importJSON);
+
+  refreshList('');
+  render();
+})();
+
+
+// ========================================================================
+// GRAZ STANDORTRECHNER
+// ========================================================================
+
+"use strict";
+(function(){
+  var PRICE=15, HON=48, BET=0.08;
+  var nf=new Intl.NumberFormat('de-DE',{maximumFractionDigits:0});
+  var nf1=new Intl.NumberFormat('de-DE',{maximumFractionDigits:1});
+  function eur(n){var r=Math.round(n);return (r<0?'−':'')+nf.format(Math.abs(r))+' €';}
+  function eurNeg(n){return '−'+nf.format(Math.round(Math.abs(n)))+' €';}
+  function g(id){return document.getElementById(id);}
+  function num(id){return parseFloat(g(id).value)||0;}
+
+  // ---- eine Kursschicht rechnen + rendern -------------------------------
+  function courseLayer(prefix, hpc, unit, perSem){
+    var ps=num(prefix+'Ps'), r=num(prefix+'R')/100, tn=num(prefix+'Tn');
+    var matH=num('graz_matKurse');
+    g(prefix+'Ps-o').textContent=ps+' h';
+    g(prefix+'R-o').textContent=(r*100).toFixed(0)+' %';
+    var count=hpc>0?ps/hpc:0;
+    var realH=ps*r;
+    var ums=realH*tn*PRICE;
+    var fremd=realH*(HON+matH);
+    var db=ums-fremd;
+    var conv='→ '+nf1.format(count).replace('.',',')+' '+unit+'/Jahr';
+    if(perSem) conv+=' ('+nf1.format(count/2).replace('.',',')+'/Sem.)';
+    conv+=' · realisiert '+nf.format(Math.round(realH))+' h';
+    g(prefix+'-conv').textContent=conv;
+    g(prefix+'-ums').textContent=eur(ums);
+    g(prefix+'-fr').textContent=eurNeg(fremd);
+    g(prefix+'-db').textContent=eur(db);
+    g(prefix+'-q').textContent=(ums>0?(db/ums*100).toFixed(0):'0')+' %';
+    return {ums:ums, db:db};
+  }
+
+  function calc(){
+    var wk=courseLayer('wk', num('graz_wkTerm')*num('graz_wkSh'), 'Kurse', true);
+    var we=courseLayer('we', num('graz_weH'), 'Workshops', false);
+    var fe=courseLayer('fe', num('graz_feH'), 'Workshops', false);
+
+    // ---- Nachmittag (Eventbetrieb) ----
+    var walk=num('graz_nmWalk')/100, pG=num('graz_nmPrice'), guest=num('graz_nmGuest');
+    var sess=num('graz_nmSess'), weeks=num('graz_nmWeeks'), cap=num('graz_nmCap'), mat=num('graz_nmMat');
+    var pN=pG;
+    var seatsWk=sess*cap*walk;
+    var nmRev=seatsWk*pN*weeks;
+    var nmFremd=(guest*weeks)+(seatsWk*mat*weeks);
+    var nmDB=nmRev-nmFremd;
+    var perseat=pN*(1-BET)-mat, denom=sess*cap*perseat;
+    var beFill=denom>0?(guest/denom):2;
+    g('graz_nmWalk-o').textContent=(walk*100).toFixed(0)+' %';
+    g('graz_nmPrice-o').textContent=pG+' €';
+    g('graz_nmGuest-o').textContent=eur(guest);
+    g('graz_nm-be').textContent=(beFill>1?'>100':(beFill*100).toFixed(0))+' %';
+    g('graz_nm-ums').textContent=eur(nmRev);
+    g('graz_nm-fr').textContent=eurNeg(nmFremd);
+    g('graz_nm-db').textContent=eur(nmDB);
+    g('graz_nm-db').className='db '+(nmDB>=0?'':'neg');
+    g('graz_nm-q').textContent=(nmRev>0?(nmDB/nmRev*100).toFixed(0):'0')+' %';
+
+    // ---- Teamevents (B2B) ----
+    var ev=num('graz_teEv'), etn=num('graz_teTn'), ep=num('graz_tePrice'), eh=num('graz_teHon'), em=num('graz_teMat');
+    var teRev=ev*etn*ep;
+    var teFremd=ev*(eh+etn*em);
+    var teDB=teRev-teFremd;
+    g('graz_te-conv').textContent=ev>0?('→ '+ev+' Events/Jahr · Ø '+etn+' TN'):'inaktiv — Events/Jahr auf > 0 setzen';
+    g('graz_te-ums').textContent=eur(teRev);
+    g('graz_te-fr').textContent=eurNeg(teFremd);
+    g('graz_te-db').textContent=eur(teDB);
+    g('graz_te-db').className='db '+(teDB>=0?'':'neg');
+    g('graz_te-q').textContent=(teRev>0?(teDB/teRev*100).toFixed(0):'0')+' %';
+
+    // ---- standortweit ----
+    var fx=num('graz_fx'), wv=num('graz_wv'), betrieb=num('graz_betrieb');
+    g('graz_fx-o').textContent=eur(fx);
+    g('graz_wv-o').textContent=eur(wv);
+    g('graz_betrieb-o').textContent=eur(betrieb);
+    var totalNet=wk.ums+we.ums+fe.ums+nmRev+teRev;
+    var beteiligung=BET*totalNet;
+    var lc=fx+beteiligung;
+    var sumDB=wk.db+we.db+fe.db+nmDB+teDB;
+    var vorMiete=sumDB-lc-wv-betrieb;
+    g('graz_g-sumdb').textContent=eur(sumDB);
+    g('graz_g-lc').textContent=eurNeg(lc);
+    g('graz_g-wv').textContent=eurNeg(wv);
+    g('graz_g-be').textContent=eurNeg(betrieb);
+    g('graz_g-lcsub').textContent='Beteiligung '+eur(beteiligung)+' (8 % auf '+eur(totalNet)+' Gesamt-Nettoumsatz)';
+
+    // ---- Ergebnisleiste ----
+    var rent=num('graz_rent');
+    var erg=vorMiete-12*rent;
+    g('graz_b-vm').textContent=eur(vorMiete);
+    g('graz_b-vm').className='v '+(vorMiete>=0?'':'neg');
+    g('graz_b-be').textContent=vorMiete>0?(eur(vorMiete/12)+'/M'):'0 €';
+    g('graz_b-erg').textContent=(erg>=0?'+':'')+eur(erg);
+    g('graz_b-erg').className='v '+(erg>=0?'pos':'neg');
+
+    updateProjection();
+  }
+
+  // ---- Mehrjahres-Projektion -------------------------------------------
+  // Nutzt Struktur/Preise/Ø-TN aus den Karten; je Jahr eigene Auslastung,
+  // Fixum und Miete. Werbung & Betriebskosten konstant aus dem Gesamt-Block.
+  function pCourse(plan, hpc, tn, util){
+    var realH=plan*util, ums=realH*tn*PRICE;
+    return {ums:ums, db:ums-realH*(HON+num('graz_matKurse'))};
+  }
+  function pAfter(walk){
+    var pN=num('graz_nmPrice'), seatsWk=num('graz_nmSess')*num('graz_nmCap')*walk;
+    var ums=seatsWk*pN*num('graz_nmWeeks');
+    return {ums:ums, db:ums-(num('graz_nmGuest')*num('graz_nmWeeks'))-(seatsWk*num('graz_nmMat')*num('graz_nmWeeks'))};
+  }
+  function pTeam(ev){
+    var ums=ev*num('graz_teTn')*num('graz_tePrice');
+    return {ums:ums, db:ums-ev*(num('graz_teHon')+num('graz_teTn')*num('graz_teMat'))};
+  }
+  function projYear(util, walk, ev, fix){
+    var wk=pCourse(num('graz_wkPs'), num('graz_wkTerm')*num('graz_wkSh'), num('graz_wkTn'), util);
+    var we=pCourse(num('graz_wePs'), num('graz_weH'), num('graz_weTn'), util);
+    var fe=pCourse(num('graz_fePs'), num('graz_feH'), num('graz_feTn'), util);
+    var nm=pAfter(walk), te=pTeam(ev);
+    var net=wk.ums+we.ums+fe.ums+nm.ums+te.ums;
+    var bet=BET*net, lc=fix+bet;
+    var db=wk.db+we.db+fe.db+nm.db+te.db;
+    return {net:net, db:db, lc:lc, vor:db-lc-num('graz_wv')-num('graz_betrieb')};
+  }
+  function updateProjection(){
+    var cum=0;
+    for(var y=1;y<=3;y++){
+      var r=projYear(num('y'+y+'Util')/100, num('y'+y+'Walk')/100, num('y'+y+'Ev'), num('y'+y+'Fix'));
+      var rent=num('y'+y+'Rent'), erg=r.vor-12*rent; cum+=erg;
+      g('p'+y+'-net').textContent=eur(r.net);
+      g('p'+y+'-db').textContent=eur(r.db);
+      g('p'+y+'-lc').textContent=eurNeg(r.lc);
+      g('p'+y+'-wv').textContent=eurNeg(num('graz_wv'));
+      g('p'+y+'-be2').textContent=eurNeg(num('graz_betrieb'));
+      g('p'+y+'-vor').textContent=eur(r.vor);
+      g('p'+y+'-bem').textContent=r.vor>0?(eur(r.vor/12)+'/M'):'—';
+      g('p'+y+'-rent').textContent=eurNeg(12*rent);
+      g('p'+y+'-erg').textContent=(erg>=0?'+':'')+eur(erg);
+      g('p'+y+'-erg').className='pv '+(erg>=0?'pos':'neg');
+    }
+    g('graz_p-cum').textContent=(cum>=0?'+':'')+eur(cum);
+    g('graz_p-cum').className='db '+(cum>=0?'pos':'neg');
+  }
+
+  // ---- alle Eingabe-IDs (für Live-Update + Szenarien) -------------------
+  var PERSIST_IDS=['wkPs','wkR','wkTn','wkTerm','wkSh','wePs','weR','weTn','weH',
+    'fePs','feR','feTn','feH','nmWalk','nmPrice','nmGuest','nmSess','nmWeeks','nmCap','nmMat',
+    'teEv','teTn','tePrice','teHon','teMat','matKurse','fx','wv','betrieb','rent','m2','ppm',
+    'y1Util','y1Walk','y1Ev','y1Fix','y1Rent','y2Util','y2Walk','y2Ev','y2Fix','y2Rent',
+    'y3Util','y3Walk','y3Ev','y3Fix','y3Rent'];
+  PERSIST_IDS.forEach(function(id){ g(id).addEventListener('input', calc); });
+
+  // ---- €/m² übernehmen ----
+  g('graz_btnTake').addEventListener('click', function(){
+    g('graz_rent').value=Math.round(num('graz_m2')*num('graz_ppm')); calc();
+  });
+
+  // ---- Standardwerte merken (für Zurücksetzen) ----
+  var DEFAULTS={}; PERSIST_IDS.forEach(function(id){ DEFAULTS[id]=g(id).value; });
+  g('graz_btnReset').addEventListener('click', function(){
+    PERSIST_IDS.forEach(function(id){ g(id).value=DEFAULTS[id]; }); calc();
+  });
+
+  // ---- Szenarien (localStorage, fällt still zurück falls nicht verfügbar) ----
+  var KEY='zf_graz_zf_graz_scenarios_v1';
+  function loadStore(){ try{ return JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ return {}; } }
+  function saveStore(o){ try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(e){} }
+  function refreshList(sel){
+    var o=loadStore(), s=g('graz_scen');
+    s.innerHTML='<option value="">— gespeicherte —</option>';
+    Object.keys(o).sort().forEach(function(n){
+      var op=document.createElement('option'); op.value=n; op.textContent=n;
+      if(n===sel) op.selected=true; s.appendChild(op);
+    });
+  }
+  g('graz_btnSave').addEventListener('click', function(){
+    var name=prompt('Szenario-Name (z. B. „konservativ" / „Ziel J3"):');
+    if(!name) return;
+    var o=loadStore(), data={};
+    PERSIST_IDS.forEach(function(id){ data[id]=g(id).value; });
+    o[name]=data; saveStore(o); refreshList(name);
+  });
+  g('graz_btnLoad').addEventListener('click', function(){
+    var name=g('graz_scen').value; if(!name) return;
+    var o=loadStore(); if(!o[name]) return;
+    PERSIST_IDS.forEach(function(id){ if(o[name][id]!==undefined) g(id).value=o[name][id]; });
+    calc();
+  });
+  g('graz_btnDel').addEventListener('click', function(){
+    var name=g('graz_scen').value; if(!name) return;
+    if(!confirm('Szenario „'+name+'" löschen?')) return;
+    var o=loadStore(); delete o[name]; saveStore(o); refreshList('');
+  });
+
+  // ---- JSON Export/Import --------------------------------------------------
+  function exportJSON() {
+    var data = {};
+    PERSIST_IDS.forEach(function(id){ data[id] = g(id).value; });
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'graz_zf-graz-standortrechner.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function importJSON() {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.addEventListener('change', function(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          var data = JSON.parse(e.target.result);
+          // Validierung: Prüfe ob die Daten die erwarteten IDs haben
+          var valid = true;
+          for (var key in data) {
+            if (PERSIST_IDS.indexOf(key) === -1) {
+              valid = false;
+              break;
+            }
+          }
+          if (valid) {
+            PERSIST_IDS.forEach(function(id){ 
+              if (data[id] !== undefined) g(id).value = data[id]; 
+            });
+            calc();
+          } else {
+            alert('Ungültige JSON-Datei: Unbekannte Felder gefunden.');
+          }
+        } catch (e) {
+          alert('Fehler beim Import: ' + e.message);
+        }
+      };
+      reader.readAsText(file);
+    });
+    input.click();
+  }
+
+  g('graz_btnExport').addEventListener('click', exportJSON);
+  g('graz_btnImport').addEventListener('click', importJSON);
+
+  refreshList('');
+  calc();
+})();
+
+// ========================================================================
+// WIEN PROGRAMMPLANUNG
+// ========================================================================
+
+// ---- Globale Funktionen (für HTML-Attribute wie onclick) --------------------
+function programm_toggleCard(cardId) {
+  var card = document.getElementById(cardId);
+  if (card) {
+    card.classList.toggle('collapsed');
+    // Zustand in localStorage speichern
+    try {
+      var collapsed = card.classList.contains('collapsed');
+      localStorage.setItem('zf_sperr_collapsed', collapsed ? '1' : '0');
+    } catch(e) {}
+  }
+}
+
+function programm_initCollapsibleCards() {
+  // Sperrzeiten-Karte: standardmäßig eingeklappt
+  try {
+    var card = document.getElementById('sperrCard');
+    if (card) {
+      var collapsed = localStorage.getItem('zf_sperr_collapsed');
+      if (collapsed === '1') {
+        card.classList.add('collapsed');
+      } else if (collapsed !== '0') {
+        // Default: eingeklappt
+        card.classList.add('collapsed');
+        localStorage.setItem('zf_sperr_collapsed', '1');
+      }
+    }
+  } catch(e) {
+    // Falls localStorage nicht verfügbar
+    var card = document.getElementById('sperrCard');
+    if (card) card.classList.add('collapsed');
+  }
+}
+
+// ---- Haupt-App (IIFE) ------------------------------------------------------
+(function(){
+  var WD=['So','Mo','Di','Mi','Do','Fr','Sa']; // getDay() index
+  var nf=new Intl.NumberFormat('de-DE',{maximumFractionDigits:0});
+  function g(id){return document.getElementById(id);}
+  function uid(){ return 'x'+Math.random().toString(36).slice(2,9); }
+  
+  // ---- Benachrichtigungen ------------------------------------------------
+  function showNotification(msg, duration) {
+    duration = duration || 1500;
+    var notification = document.createElement('div');
+    notification.style.position = 'fixed';
+    notification.style.bottom = '100px';
+    notification.style.left = '50%';
+    notification.style.transform = 'translateX(-50%)';
+    notification.style.background = 'var(--accent)';
+    notification.style.color = '#fff';
+    notification.style.padding = '10px 20px';
+    notification.style.borderRadius = 'var(--r)';
+    notification.style.fontSize = '13px';
+    notification.style.zIndex = '1000';
+    notification.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+    notification.textContent = msg;
+    document.body.appendChild(notification);
+    
+    setTimeout(function() {
+      notification.style.opacity = '0';
+      notification.style.transition = 'opacity 0.3s';
+      setTimeout(function() {
+        document.body.removeChild(notification);
+      }, 300);
+    }, duration);
+  }
+
+  // ---- Datums-Helfer ----------------------------------------------------
+  function parseD(s){ if(!s) return null; var p=s.split('-'); if(p.length!==3) return null; return new Date(+p[0],+p[1]-1,+p[2]); }
+  function pad(n){ return (n<10?'0':'')+n; }
+  function fmt(d){ return d?pad(d.getDate())+'.'+pad(d.getMonth()+1)+'.'+d.getFullYear():'—'; }
+  function addDays(d,n){ var x=new Date(d); x.setDate(x.getDate()+n); return x; }
+  function sameDay(a,b){ return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
+
+  // Oster-Algorithmus (Gregorianisch) → gesetzliche Feiertage Österreich
+  function easter(y){
+    var a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),
+        gg=Math.floor((b-f+1)/3),h=(19*a+b-d-gg+15)%30,i=Math.floor(c/4),k=c%4,
+        l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),
+        mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;
+    return new Date(y,mo-1,da);
+  }
+  function feiertage(y){
+    var e=easter(y);
+    return [
+      {n:'Neujahr', d:new Date(y,0,1)}, {n:'Hl. Drei Könige', d:new Date(y,0,6)},
+      {n:'Ostermontag', d:addDays(e,1)}, {n:'Staatsfeiertag', d:new Date(y,4,1)},
+      {n:'Christi Himmelfahrt', d:addDays(e,39)}, {n:'Pfingstmontag', d:addDays(e,50)},
+      {n:'Fronleichnam', d:addDays(e,60)}, {n:'Mariä Himmelfahrt', d:new Date(y,7,15)},
+      {n:'Nationalfeiertag', d:new Date(y,9,26)}, {n:'Allerheiligen', d:new Date(y,10,1)},
+      {n:'Mariä Empfängnis', d:new Date(y,11,8)}, {n:'Christtag', d:new Date(y,11,25)},
+      {n:'Stefanitag', d:new Date(y,11,26)}
+    ];
+  }
+  function isFeiertag(d){
+    var list=feiertage(d.getFullYear());
+    for(var i=0;i<list.length;i++) if(sameDay(d,list[i].d)) return true;
+    return false;
+  }
+  function isInSperr(d){
+    for(var i=0;i<state.sperr.length;i++){
+      var v=parseD(state.sperr[i].von), b=parseD(state.sperr[i].bis);
+      if(v&&b&&d>=v&&d<=b) return true;
+    }
+    return false;
+  }
+  function blockedForCourse(d, inFerien){
+    if(isFeiertag(d)) return true;
+    if(!inFerien && isInSperr(d)) return true;
+    return false;
+  }
+  // Sitzungstermine erzeugen: ausgesetzte Wochen werden übersprungen (Kurs verlängert sich)
+  function genDates(startStr, weekday, n, inFerien){
+    var d=parseD(startStr); if(!d||!n) return [];
+    var guard=0; while(d.getDay()!==weekday && guard<7){ d=addDays(d,1); guard++; }
+    var out=[]; guard=0;
+    while(out.length<n && guard<520){
+      if(!blockedForCourse(d, inFerien)) out.push(new Date(d));
+      d=addDays(d,7); guard++;
+    }
+    return out;
+  }
+  function toMin(t){ if(!t) return null; var p=t.split(':'); return (+p[0])*60+(+p[1]); }
+  
+  // Helfer für Workshops: Tagesdaten aus start + tage generieren
+  function getWorkshopDates(ws) {
+    var start = parseD(ws.start);
+    if (!start || !ws.tage) return [];
+    var dates = [];
+    for (var i = 0; i < ws.tage; i++) {
+      dates.push(addDays(start, i));
+    }
+    return dates;
+  }
+  
+  // Helfer: Prüfe ob zwei Zeitbereiche überlappen
+  function timesOverlap(von1, bis1, von2, bis2) {
+    if (von1 === null || bis1 === null || von2 === null || bis2 === null) return false;
+    return von1 < bis2 && von2 < bis1;
+  }
+  
+  // Gesamtstunden für einen Workshop berechnen
+  function getWorkshopTotalHours(ws) {
+    if (!ws.zeiten) return 0;
+    var total = 0;
+    ws.zeiten.forEach(function(z) {
+      var vonMin = toMin(z.von);
+      var bisMin = toMin(z.bis);
+      if (vonMin !== null && bisMin !== null) {
+        total += (bisMin - vonMin) / 60;
+      }
+    });
+    return total;
+  }
+
+  // ---- State ------------------------------------------------------------
+  function freshState(){
+    return {
+      planjahr: 2026,
+      sollWk:1000, sollWs:532,
+      sperr:[
+        {id:uid(),name:'Semesterferien 2026', von:'2026-01-31', bis:'2026-02-08'},
+        {id:uid(),name:'Osterferien 2026',    von:'2026-03-28', bis:'2026-04-06'},
+        {id:uid(),name:'Pfingstferien 2026',  von:'2026-05-23', bis:'2026-05-25'},
+        {id:uid(),name:'Sommerferien 2026',   von:'2026-07-04', bis:'2026-09-06'},
+        {id:uid(),name:'Herbstferien 2026',   von:'2026-10-27', bis:'2026-10-31'},
+        {id:uid(),name:'Weihnachtsferien 26/27', von:'2026-12-24', bis:'2027-01-06'},
+        {id:uid(),name:'Semesterferien 2027', von:'2027-01-30', bis:'2027-02-07'},
+        {id:uid(),name:'Osterferien 2027',    von:'2027-03-20', bis:'2027-03-29'},
+        {id:uid(),name:'Pfingstferien 2027',  von:'2027-05-15', bis:'2027-05-17'},
+        {id:uid(),name:'Sommerferien 2027',   von:'2027-07-03', bis:'2027-09-05'}
+      ],
+      kurse:[
+        {id:uid(),titel:'Aktzeichnen Grundkurs', dozent:'', tag:3, zeit:'18:00', start:'2026-03-04', sessions:7, std:3, raum:'1', inFerien:false, eingetragen:false}
+      ],
+      workshops:[
+        {id:uid(),titel:'Wochenend-Workshop Aquarell', dozent:'', start:'2026-04-18', tage:1, zeiten:[{von:'10:00', bis:'17:00'}], raum:'2', eingetragen:false}
+      ]
+    };
+  }
+  var state=freshState();
+  var currentEditKurs = null;
+  var currentEditWs = null;
+  var sortState = { kurs: { col: null, asc: true }, ws: { col: null, asc: true } };
+
+  // ---- Rendering --------------------------------------------------------
+  function esc(s){ return (s||'').replace(/"/g,'&quot;'); }
+
+  function renderSperr(){
+    var h='';
+    state.sperr.forEach(function(s){
+      h+='<div class="item"><div class="frow">'+
+        '<label class="fld" style="flex:2; min-width:160px;">Bezeichnung<input type="text" data-t="sperr" data-id="'+s.id+'" data-f="name" value="'+esc(s.name)+'"></label>'+
+        '<label class="fld">von<input type="date" data-t="sperr" data-id="'+s.id+'" data-f="von" value="'+s.von+'"></label>'+
+        '<label class="fld">bis<input type="date" data-t="sperr" data-id="'+s.id+'" data-f="bis" value="'+s.bis+'"></label>'+
+        '<button class="del" data-del="sperr" data-id="'+s.id+'">Entfernen</button>'+
+        '</div></div>';
+    });
+    g('programm_sperrList').innerHTML=h;
+  }
+
+  function renderKurse(){
+    // Sortieren
+    var sorted = [...state.kurse];
+    if (sortState.kurs.col) {
+      sorted.sort(function(a, b) {
+        var valA = a[sortState.kurs.col] !== undefined ? a[sortState.kurs.col] : '';
+        var valB = b[sortState.kurs.col] !== undefined ? b[sortState.kurs.col] : '';
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return sortState.kurs.asc ? valA - valB : valB - valA;
+        }
+        valA = String(valA || '').toLowerCase();
+        valB = String(valB || '').toLowerCase();
+        if (valA < valB) return sortState.kurs.asc ? -1 : 1;
+        if (valA > valB) return sortState.kurs.asc ? 1 : -1;
+        return 0;
+      });
+    }
+    
+    // Tabellenzeilen generieren
+    var h='';
+    sorted.forEach(function(k){
+      var dates = genDates(k.start, +k.tag, +k.sessions, !!k.inFerien);
+      var totalHours = (+k.sessions) * (+k.std);
+      var endDate = dates.length > 0 ? fmt(dates[dates.length-1]) : '—';
+      var tagName = WD[+k.tag] || k.tag;
+      
+      h+='<tr data-id="'+k.id+'">'+
+        '<td data-col="titel">'+esc(k.titel)+'</td>'+
+        '<td data-col="dozent">'+esc(k.dozent)+'</td>'+
+        '<td data-col="tag">'+tagName+'</td>'+
+        '<td data-col="zeit">'+(k.zeit||'')+'</td>'+
+        '<td data-col="start">'+fmt(parseD(k.start))+'</td>'+
+        '<td data-col="sessions">'+k.sessions+'</td>'+
+        '<td data-col="std">'+k.std+'</td>'+
+        '<td data-col="raum">'+esc(k.raum)+'</td>'+
+        '<td data-col="total">'+nf.format(totalHours)+'</td>'+
+        '<td data-col="ende">'+endDate+'</td>'+
+        '<td class="status"><span class="dot '+ (k.eingetragen ? '' : 'empty') +'"></span></td>'+
+        '<td class="actions">'+
+          '<button class="edit" data-edit="kurse" data-id="'+k.id+'">Bearbeiten</button>'+
+          '<button class="copy" data-copy="kurse" data-id="'+k.id+'">Kopieren</button>'+
+          '<button class="del" data-del="kurse" data-id="'+k.id+'">Entfernen</button>'+
+        '</td>'+
+        '</tr>';
+    });
+    g('programm_kursList').innerHTML=h || '<tr><td colspan="12" style="text-align:center; color:var(--muted);">Keine Wochenkurse</td></tr>';
+    
+    // Sortier-Indikatoren aktualisieren
+    document.querySelectorAll('#kursTable th').forEach(function(th) {
+      th.classList.remove('sorted-asc', 'sorted-desc');
+      if (th.getAttribute('data-sort') === sortState.kurs.col) {
+        th.classList.add(sortState.kurs.asc ? 'sorted-asc' : 'sorted-desc');
+      }
+    });
+  }
+
+  function renderWs(){
+    // Sortieren
+    var sorted = [...state.workshops];
+    if (sortState.ws.col) {
+      sorted.sort(function(a, b) {
+        var valA = a[sortState.ws.col] !== undefined ? a[sortState.ws.col] : '';
+        var valB = b[sortState.ws.col] !== undefined ? b[sortState.ws.col] : '';
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return sortState.ws.asc ? valA - valB : valB - valA;
+        }
+        valA = String(valA || '').toLowerCase();
+        valB = String(valB || '').toLowerCase();
+        if (valA < valB) return sortState.ws.asc ? -1 : 1;
+        if (valA > valB) return sortState.ws.asc ? 1 : -1;
+        return 0;
+      });
+    }
+    
+    // Tabellenzeilen generieren
+    var h='';
+    sorted.forEach(function(w){
+      var totalHours = getWorkshopTotalHours(w);
+      var dates = getWorkshopDates(w);
+      var dateInfo = '';
+      if (dates.length > 0) {
+        dateInfo = fmt(dates[0]);
+        if (dates.length > 1) {
+          dateInfo += ' – ' + fmt(dates[dates.length-1]);
+        }
+      }
+      
+      // Uhrzeiten als String
+      var zeitenStr = '';
+      if (w.zeiten && w.zeiten.length > 0) {
+        zeitenStr = w.zeiten.map(function(z) { return (z.von||'?') + '–' + (z.bis||'?'); }).join(' · ');
+      }
+      
+      h+='<tr data-id="'+w.id+'">'+
+        '<td data-col="titel">'+esc(w.titel)+'</td>'+
+        '<td data-col="dozent">'+esc(w.dozent)+'</td>'+
+        '<td data-col="start">'+dateInfo+'</td>'+
+        '<td data-col="tage">'+(w.tage||1)+'</td>'+
+        '<td data-col="zeiten">'+zeitenStr+'</td>'+
+        '<td data-col="raum">'+esc(w.raum)+'</td>'+
+        '<td data-col="total">'+nf.format(totalHours)+'</td>'+
+        '<td class="status"><span class="dot '+ (w.eingetragen ? '' : 'empty') +'"></span></td>'+
+        '<td class="actions">'+
+          '<button class="edit" data-edit="workshops" data-id="'+w.id+'">Bearbeiten</button>'+
+          '<button class="copy" data-copy="workshops" data-id="'+w.id+'">Kopieren</button>'+
+          '<button class="del" data-del="workshops" data-id="'+w.id+'">Entfernen</button>'+
+        '</td>'+
+        '</tr>';
+    });
+    g('programm_wsList').innerHTML=h || '<tr><td colspan="9" style="text-align:center; color:var(--muted);">Keine Workshops</td></tr>';
+    
+    // Sortier-Indikatoren aktualisieren
+    document.querySelectorAll('#wsTable th').forEach(function(th) {
+      th.classList.remove('sorted-asc', 'sorted-desc');
+      if (th.getAttribute('data-sort') === sortState.ws.col) {
+        th.classList.add(sortState.ws.asc ? 'sorted-asc' : 'sorted-desc');
+      }
+    });
+  }
+
+  function renderFeiertage(){
+    var years={}; 
+    state.sperr.forEach(function(s){ var v=parseD(s.von); if(v) years[v.getFullYear()]=1; });
+    state.kurse.forEach(function(k){ var v=parseD(k.start); if(v){years[v.getFullYear()]=1; years[v.getFullYear()+1]=1;} });
+    var ys=Object.keys(years).sort();
+    if(!ys.length){ g('programm_feiertage').textContent=''; return; }
+    var parts=['Automatisch gesperrte gesetzliche Feiertage:'];
+    ys.forEach(function(y){
+      var names=feiertage(+y).map(function(f){ return f.n+' '+fmt(f.d); });
+      parts.push('<b>'+y+':</b> '+names.join(' · '));
+    });
+    g('programm_feiertage').innerHTML=parts.join('<br>');
+  }
+
+  function renderAll(){
+    renderSperr(); 
+    renderKurse(); 
+    renderWs(); 
+    renderFeiertage(); 
+    recompute();
+    // Sortierung neu einrichten (falls Tabellen neu geladen wurden)
+    setupSorting();
+  }
+  
+  // ---- Detailformulare ----------------------------------------------------
+  function renderKursDetail(kurs, isNew) {
+    var opts=''; for(var w=1;w<=6;w++){ opts+='<option value="'+w+'"'+(kurs.tag==w?' selected':'')+'>'+WD[w]+'</option>'; }
+    var h = '<div class="frow">'+
+        '<label class="fld" style="flex:2; min-width:150px;">Titel<input type="text" id="programm_detKursTitel" value="'+esc(kurs.titel)+'"></label>'+
+        '<label class="fld" style="flex:1; min-width:120px;">Dozent:in<input type="text" id="programm_detKursDozent" value="'+esc(kurs.dozent)+'"></label>'+
+      '</div>'+
+      '<div class="frow" style="margin-top:8px;">'+
+        '<label class="fld">Tag<select id="programm_detKursTag">'+opts+'</select></label>'+
+        '<label class="fld">Uhrzeit<input type="time" id="programm_detKursZeit" value="'+(kurs.zeit||'')+'" style="width:96px;"></label>'+
+        '<label class="fld">Start<input type="date" id="programm_detKursStart" value="'+(kurs.start||'')+'"></label>'+
+        '<label class="fld">Termine<input type="number" id="programm_detKursSessions" value="'+(kurs.sessions||7)+'" min="1" max="30" style="width:74px;"></label>'+
+        '<label class="fld">Std/Termin<input type="number" id="programm_detKursStd" value="'+(kurs.std||3)+'" min="0.5" max="8" step="0.5" style="width:84px;"></label>'+
+        '<label class="fld">Raum<input type="text" id="programm_detKursRaum" value="'+esc(kurs.raum)+'" style="width:70px;"></label>'+
+      '</div>'+
+      '<div class="derived">'+
+        '<label class="chk"><input type="checkbox" id="programm_detKursInFerien"'+(kurs.inFerien?' checked':'')+'> läuft auch in Ferien</label>'+
+        '<label class="chk"><input type="checkbox" id="programm_detKursEingetragen"'+(kurs.eingetragen?' checked':'')+'> Eingetragen</label>'+
+      '</div>'+
+      '<div class="frow" style="margin-top:12px; gap:8px;">'+
+        '<button class="add" id="programm_detKursSave" data-id="'+kurs.id+'" data-isnew="'+isNew+'">Übernehmen</button>'+
+        '<button id="programm_detKursCancel">Abbrechen</button>'+
+      '</div>';
+    g('programm_kursDetailForm').innerHTML = h;
+    g('programm_kursDetailForm').classList.add('active');
+    
+    // Event-Handler (vorherige entfernen, um Duplikate zu vermeiden)
+    var saveBtn = g('programm_detKursSave');
+    var cancelBtn = g('programm_detKursCancel');
+    
+    // Clone the buttons to remove old event listeners
+    var saveBtnClone = saveBtn.cloneNode(true);
+    var cancelBtnClone = cancelBtn.cloneNode(true);
+    saveBtn.parentNode.replaceChild(saveBtnClone, saveBtn);
+    cancelBtn.parentNode.replaceChild(cancelBtnClone, cancelBtn);
+    
+    saveBtnClone.addEventListener('click', function() {
+      saveKursDetail(kurs.id, this.getAttribute('data-isnew')==='true');
+    });
+    cancelBtnClone.addEventListener('click', function() {
+      g('programm_kursDetailForm').classList.remove('active');
+      currentEditKurs = null;
+    });
+  }
+  
+  function saveKursDetail(id, isNew) {
+    var rec = state.kurse.filter(function(r){return r.id===id;})[0];
+    if (!rec && isNew) {
+      rec = {id:id, titel:'', dozent:'', tag:3, zeit:'18:00', start:'', sessions:7, std:3, raum:'', inFerien:false, eingetragen:false};
+      state.kurse.push(rec);
+    }
+    if (rec) {
+      rec.titel = g('programm_detKursTitel').value;
+      rec.dozent = g('programm_detKursDozent').value;
+      rec.tag = +g('programm_detKursTag').value;
+      rec.zeit = g('programm_detKursZeit').value;
+      rec.start = g('programm_detKursStart').value;
+      rec.sessions = +g('programm_detKursSessions').value;
+      rec.std = +g('programm_detKursStd').value;
+      rec.raum = g('programm_detKursRaum').value;
+      rec.inFerien = g('programm_detKursInFerien').checked;
+      rec.eingetragen = g('programm_detKursEingetragen').checked;
+    }
+    g('programm_kursDetailForm').classList.remove('active');
+    currentEditKurs = null;
+    renderKurse();
+    recompute();
+    renderFeiertage();
+  }
+  
+  function renderWsDetail(ws, isNew) {
+    var h = '<div class="frow">'+
+        '<label class="fld" style="flex:2; min-width:150px;">Titel<input type="text" id="programm_detWsTitel" value="'+esc(ws.titel)+'"></label>'+
+        '<label class="fld" style="flex:1; min-width:110px;">Dozent:in<input type="text" id="programm_detWsDozent" value="'+esc(ws.dozent)+'"></label>'+
+      '</div>'+
+      '<div class="frow" style="margin-top:8px;">'+
+        '<label class="fld">Startdatum<input type="date" id="programm_detWsStart" value="'+(ws.start||'')+'"></label>'+
+        '<label class="fld">Tage<input type="number" id="programm_detWsTage" value="'+(ws.tage||1)+'" min="1" style="width:70px;"></label>'+
+        '<label class="fld">Raum<input type="text" id="programm_detWsRaum" value="'+esc(ws.raum)+'" style="width:70px;"></label>'+
+      '</div>'+
+      '<div style="margin-top:8px; padding-left:10px; border-left:2px solid var(--line);">'+
+        '<div style="font-size:12px; color:var(--muted); margin-bottom:4px;">Tageszeiten:</div>'+
+        '<div id="programm_detWsZeitenContainer"></div>'+
+      '</div>'+
+      '<div class="derived">'+
+        '<label class="chk"><input type="checkbox" id="programm_detWsEingetragen"'+(ws.eingetragen?' checked':'')+'> Eingetragen</label>'+
+      '</div>'+
+      '<div class="frow" style="margin-top:12px; gap:8px;">'+
+        '<button class="add" id="programm_detWsSave" data-id="'+ws.id+'" data-isnew="'+isNew+'">Übernehmen</button>'+
+        '<button id="programm_detWsCancel">Abbrechen</button>'+
+      '</div>';
+    g('programm_wsDetailForm').innerHTML = h;
+    g('programm_wsDetailForm').classList.add('active');
+    
+    // Tageszeiten-Felder generieren
+    renderWsZeiten(ws);
+    
+    // Event-Handler (vorherige entfernen, um Duplikate zu vermeiden)
+    var saveBtn = g('programm_detWsSave');
+    var cancelBtn = g('programm_detWsCancel');
+    var tageInput = g('programm_detWsTage');
+    
+    // Clone the buttons to remove old event listeners
+    var saveBtnClone = saveBtn.cloneNode(true);
+    var cancelBtnClone = cancelBtn.cloneNode(true);
+    var tageInputClone = tageInput.cloneNode(true);
+    saveBtn.parentNode.replaceChild(saveBtnClone, saveBtn);
+    cancelBtn.parentNode.replaceChild(cancelBtnClone, cancelBtn);
+    tageInput.parentNode.replaceChild(tageInputClone, tageInput);
+    
+    saveBtnClone.addEventListener('click', function() {
+      saveWsDetail(ws.id, this.getAttribute('data-isnew')==='true');
+    });
+    cancelBtnClone.addEventListener('click', function() {
+      g('programm_wsDetailForm').classList.remove('active');
+      currentEditWs = null;
+    });
+    
+    // Bei Änderung der Tage: Felder anpassen
+    tageInputClone.addEventListener('input', function() {
+      ws.tage = +this.value || 1;
+      renderWsZeiten(ws);
+    });
+  }
+  
+  function renderWsZeiten(ws) {
+    var tage = +g('programm_detWsTage').value || 1;
+    var start = g('programm_detWsStart').value ? parseD(g('programm_detWsStart').value) : null;
+    var h = '';
+    for (var i = 0; i < tage; i++) {
+      var tagZeit = (ws.zeiten && ws.zeiten[i]) || {von: '10:00', bis: '17:00'};
+      var tagDatum = start ? fmt(addDays(start, i)) : 'Tag ' + (i+1);
+      h += '<div class="frow" style="margin-top:6px;">'+
+        '<label class="fld" style="min-width:100px;">'+tagDatum+'</label>'+
+        '<label class="fld">von<input type="time" id="programm_detWsVon'+i+'" value="'+(tagZeit.von||'10:00')+'" style="width:90px;"></label>'+
+        '<label class="fld">bis<input type="time" id="programm_detWsBis'+i+'" value="'+(tagZeit.bis||'17:00')+'" style="width:90px;"></label>'+
+        '</div>';
+    }
+    g('programm_detWsZeitenContainer').innerHTML = h;
+  }
+  
+  function saveWsDetail(id, isNew) {
+    var rec = state.workshops.filter(function(r){return r.id===id;})[0];
+    if (!rec && isNew) {
+      rec = {id:id, titel:'', dozent:'', start:'', tage:1, zeiten:[], raum:'', eingetragen:false};
+      state.workshops.push(rec);
+    }
+    if (rec) {
+      rec.titel = g('programm_detWsTitel').value;
+      rec.dozent = g('programm_detWsDozent').value;
+      rec.start = g('programm_detWsStart').value;
+      rec.tage = +g('programm_detWsTage').value || 1;
+      rec.raum = g('programm_detWsRaum').value;
+      rec.eingetragen = g('programm_detWsEingetragen').checked;
+      
+      // Tageszeiten speichern
+      rec.zeiten = [];
+      var tage = +g('programm_detWsTage').value || 1;
+      for (var i = 0; i < tage; i++) {
+        rec.zeiten.push({
+          von: g('programm_detWsVon'+i).value || '10:00',
+          bis: g('programm_detWsBis'+i).value || '17:00'
+        });
+      }
+    }
+    g('programm_wsDetailForm').classList.remove('active');
+    currentEditWs = null;
+    renderWs();
+    recompute();
+  }
+  
+  // ---- Kopieren-Funktionen ----------------------------------------
+  function copyToClipboardKurs(kurs) {
+    var dates = genDates(kurs.start, +kurs.tag, +kurs.sessions, !!kurs.inFerien);
+    var dateStrs = dates.map(function(d) { return fmt(d); });
+    var totalHours = (+kurs.sessions) * (+kurs.std);
+    
+    // Endzeit berechnen: Startzeit + Std/Termin
+    var endZeit = '';
+    if (kurs.zeit && kurs.std) {
+      var startMin = toMin(kurs.zeit);
+      var endMin = startMin + (+kurs.std) * 60;
+      if (startMin !== null && endMin !== null) {
+        var endH = Math.floor(endMin / 60);
+        var endM = endMin % 60;
+        endZeit = (kurs.zeit||'?') + '–' + pad(endH) + ':' + pad(endM);
+      }
+    }
+    
+    var text = 
+      kurs.titel + ' — Dozent: ' + (kurs.dozent || '?') + '\n' +
+      WD[+kurs.tag] + ' ' + endZeit + ' · Raum ' + (kurs.raum||'?') + '\n' +
+      kurs.sessions + ' Termine: ' + dateStrs.join(', ') + '\n' +
+      nf.format(totalHours) + ' Stunden gesamt';
+    
+    copyToClipboard(text);
+  }
+  
+  function copyToClipboardWs(ws) {
+    var dates = getWorkshopDates(ws);
+    var dateStrs = dates.map(function(d) { return fmt(d); });
+    var totalHours = getWorkshopTotalHours(ws);
+    
+    var zeitenLines = [];
+    if (ws.zeiten && ws.zeiten.length > 0) {
+      dates.forEach(function(d, i) {
+        if (ws.zeiten[i]) {
+          zeitenLines.push(fmt(d) + ': ' + (ws.zeiten[i].von||'?') + '–' + (ws.zeiten[i].bis||'?'));
+        }
+      });
+    }
+    
+    var text = 
+      ws.titel + ' — Dozent: ' + (ws.dozent || '?') + '\n' +
+      zeitenLines.join(', ') + '\n' +
+      'Raum ' + (ws.raum||'?') + '\n' +
+      nf.format(totalHours) + ' Stunden gesamt';
+    
+    copyToClipboard(text);
+  }
+  
+  function copyToClipboard(text) {
+    var success = false;
+    try {
+      navigator.clipboard.writeText(text).then(function() {
+        showNotification('Kopiert ✓');
+        success = true;
+      }).catch(function(e) {
+        fallbackCopy(text);
+      });
+    } catch (e) {
+      fallbackCopy(text);
+    }
+    
+    if (!success) {
+      setTimeout(function() {
+        if (!success) fallbackCopy(text);
+      }, 100);
+    }
+  }
+  
+  function fallbackCopy(text) {
+    var textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = 0;
+    textarea.style.top = '0';
+    textarea.style.left = '0';
+    textarea.style.width = '1px';
+    textarea.style.height = '1px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      var copied = document.execCommand('copy');
+      if (copied) {
+        showNotification('Kopiert ✓');
+      } else {
+        showNotification('Kopieren fehlgeschlagen');
+      }
+    } catch (e2) {
+      showNotification('Kopieren fehlgeschlagen');
+    }
+    document.body.removeChild(textarea);
+  }
+
+  // ---- Berechnung --------------------------------------------------------
+  function recompute(){
+    var sumWk=0;
+    var sumWkYear=0;
+    state.kurse.forEach(function(k){
+      var dates=genDates(k.start, +k.tag, +k.sessions, !!k.inFerien);
+      var hrs=(+k.sessions)*(+k.std);
+      sumWk+=hrs;
+      
+      var yearHrs = 0;
+      dates.forEach(function(d) {
+        if (d.getFullYear() === state.planjahr) {
+          yearHrs += (+k.std);
+        }
+      });
+      sumWkYear += yearHrs;
+    });
+    
+    var sumWs=0;
+    var sumWsYear=0;
+    state.workshops.forEach(function(w){
+      var totalHours = getWorkshopTotalHours(w);
+      sumWs += totalHours;
+      
+      var dates = getWorkshopDates(w);
+      var yearHrs = 0;
+      if (w.zeiten && w.zeiten.length > 0) {
+        dates.forEach(function(d, i) {
+          if (d.getFullYear() === state.planjahr && w.zeiten[i]) {
+            var vonMin = toMin(w.zeiten[i].von);
+            var bisMin = toMin(w.zeiten[i].bis);
+            if (vonMin !== null && bisMin !== null) {
+              yearHrs += (bisMin - vonMin) / 60;
+            }
+          }
+        });
+      }
+      sumWsYear += yearHrs;
+    });
+
+    var dWk=sumWkYear-(+state.sollWk), dWs=sumWsYear-(+state.sollWs);
+    g('programm_abgleichJahr').textContent = state.planjahr;
+    g('programm_abgleich').innerHTML=
+      row('Wochenkurse', sumWkYear, state.sollWk, dWk)+
+      row('Workshops', sumWsYear, state.sollWs, dWs);
+
+    // Konfliktprüfung
+    var slots = [];
+    
+    state.kurse.forEach(function(k) {
+      var dates = genDates(k.start, +k.tag, +k.sessions, !!k.inFerien);
+      var vonMin = toMin(k.zeit);
+      var bisMin = vonMin + (+k.std) * 60;
+      dates.forEach(function(d) {
+        slots.push({
+          datum: d,
+          von: vonMin,
+          bis: bisMin,
+          raum: k.raum || '',
+          dozent: k.dozent || '',
+          titel: k.titel || '?'
+        });
+      });
+    });
+    
+    state.workshops.forEach(function(w) {
+      var dates = getWorkshopDates(w);
+      dates.forEach(function(d, i) {
+        if (w.zeiten && w.zeiten[i]) {
+          var vonMin = toMin(w.zeiten[i].von);
+          var bisMin = toMin(w.zeiten[i].bis);
+          slots.push({
+            datum: d,
+            von: vonMin,
+            bis: bisMin,
+            raum: w.raum || '',
+            dozent: w.dozent || '',
+            titel: w.titel || '?'
+          });
+        }
+      });
+    });
+    
+    var konf = [];
+    for (var i = 0; i < slots.length; i++) {
+      for (var j = i + 1; j < slots.length; j++) {
+        var a = slots[i], b = slots[j];
+        if (!sameDay(a.datum, b.datum)) continue;
+        if (!timesOverlap(a.von, a.bis, b.von, b.bis)) continue;
+        
+        var sameRaum = a.raum && b.raum && a.raum.trim().toLowerCase() === b.raum.trim().toLowerCase();
+        var sameDozent = a.dozent && b.dozent && a.dozent.trim().toLowerCase() === b.dozent.trim().toLowerCase();
+        
+        if (sameRaum) {
+          konf.push('Raum ' + a.raum + ': "' + a.titel + '" und "' + b.titel + '" überschneiden sich (' + fmt(a.datum) + ')');
+        }
+        if (sameDozent) {
+          konf.push(a.dozent + ': "' + a.titel + '" und "' + b.titel + '" gleichzeitig (' + fmt(a.datum) + ')');
+        }
+      }
+    }
+    
+    g('programm_konflikte').innerHTML = konf.length
+      ? '<div class="konf">⚠ ' + konf.join('<br>⚠ ') + '</div>'
+      : '<div class="ok">Keine Raum- oder Dozenten-Konflikte erkannt.</div>';
+
+    g('programm_b-wk').innerHTML=nf.format(sumWkYear)+' / '+nf.format(state.sollWk)+' h '+badge(dWk);
+    g('programm_b-ws').innerHTML=nf.format(sumWsYear)+' / '+nf.format(state.sollWs)+' h '+badge(dWs);
+    g('programm_b-konf').innerHTML = konf.length? '<span class="neg">'+konf.length+'</span>' : '<span class="pos">0</span>';
+  }
+  function row(label, ist, soll, d){{
+    var cls = Math.abs(d) <= Math.max(5, soll*0.03) ? 'pos' : (d<0?'warnc':'pos');
+    return '<div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:5px;">'+
+      '<span>'+label+'</span><span style="font-variant-numeric:tabular-nums;">geplant '+nf.format(ist)+
+      ' h · Soll '+nf.format(soll)+' h · <b class="'+cls+'">'+(d>=0?'+':'')+nf.format(d)+' h</b></span></div>';
+  }}
+  function badge(d){{
+    if(Math.abs(d)<=5) return '<span class="pos">✓</span>';
+    return '<span class="'+(d<0?'warnc':'pos')+'">'+(d>=0?'+':'')+nf.format(d)+'</span>';
+  }}
+
+  // ---- Tabellen-Sortierung ------------------------------------------------
+  function setupSorting() {
+    document.querySelectorAll('#kursTable th[data-sort]').forEach(function(th) {
+      th.addEventListener('click', function() {
+        var col = this.getAttribute('data-sort');
+        if (sortState.kurs.col === col) {
+          sortState.kurs.asc = !sortState.kurs.asc;
+        } else {
+          sortState.kurs.col = col;
+          sortState.kurs.asc = true;
+        }
+        renderKurse();
+      });
+    });
+    
+    document.querySelectorAll('#wsTable th[data-sort]').forEach(function(th) {
+      th.addEventListener('click', function() {
+        var col = this.getAttribute('data-sort');
+        if (sortState.ws.col === col) {
+          sortState.ws.asc = !sortState.ws.asc;
+        } else {
+          sortState.ws.col = col;
+          sortState.ws.asc = true;
+        }
+        renderWs();
+      });
+    });
+  }
+  
+  // ---- Eingaben ---------------------------------------------------------
+  document.addEventListener('input', onEdit);
+  document.addEventListener('change', onEdit);
+  function onEdit(e){{
+    var t=e.target;
+    if(t.id==='programm_planjahr'){{ state.planjahr=+t.value||2026; recompute(); return; }}
+    if(t.id==='programm_sollWk'){{ state.sollWk=+t.value||0; recompute(); return; }}
+    if(t.id==='programm_sollWs'){{ state.sollWs=+t.value||0; recompute(); return; }}
+    var tbl=t.getAttribute&&t.getAttribute('data-t'), id=t.getAttribute&&t.getAttribute('data-id'), f=t.getAttribute&&t.getAttribute('data-f');
+    if(!tbl||!id||!f) return;
+    var rec=state[tbl].filter(function(r){{return r.id===id;}})[0]; if(!rec) return;
+    
+    if(f==='zeiten'){{
+      var idx=+t.getAttribute('data-idx');
+      var sub=t.getAttribute('data-sub');
+      if(!rec.zeiten) rec.zeiten=[];
+      if(!rec.zeiten[idx]) rec.zeiten[idx]={{}};
+      rec.zeiten[idx][sub]=t.value;
+    }} else {{
+      rec[f] = (t.type==='checkbox')? t.checked : t.value;
+    }}
+    
+    if(f==='tage' && tbl==='workshops'){{
+      var newTage=+t.value||1;
+      if(!rec.zeiten) rec.zeiten=[];
+      while(rec.zeiten.length < newTage) {{
+        rec.zeiten.push({{von:'10:00', bis:'17:00'}});
+      }}
+      rec.zeiten.length=newTage;
+    }}
+    
+    recompute();
+    if(f==='von'||f==='bis'||f==='start') renderFeiertage();
+    if(tbl==='workshops' && (f==='tage'||f==='start'||f==='zeiten')) renderWs();
+  }}
+  
+  // Klick-Handler
+  document.addEventListener('click', function(e){{
+    var del=e.target.getAttribute&&e.target.getAttribute('data-del'); 
+    if(del){{
+      var id=e.target.getAttribute('data-id');
+      state[del]=state[del].filter(function(r){{return r.id!==id;}});
+      if(del==='sperr'){{ renderSperr(); renderFeiertage(); recompute(); }}
+      else if(del==='kurse'){{ renderKurse(); recompute(); }}
+      else {{ renderWs(); recompute(); }}
+      return;
+    }}
+    
+    var edit=e.target.getAttribute&&e.target.getAttribute('data-edit');
+    if(edit){{
+      var id=e.target.getAttribute('data-id');
+      if(edit==='kurse'){{
+        var kurs = state.kurse.filter(function(r){{return r.id===id;}})[0];
+        if(kurs) renderKursDetail(kurs, false);
+      }} else if(edit==='workshops'){{
+        var ws = state.workshops.filter(function(r){{return r.id===id;}})[0];
+        if(ws) renderWsDetail(ws, false);
+      }}
+      return;
+    }}
+    
+    var copy=e.target.getAttribute&&e.target.getAttribute('data-copy');
+    if(copy){{
+      var id=e.target.getAttribute('data-id');
+      if(copy==='kurse'){{
+        var kurs = state.kurse.filter(function(r){{return r.id===id;}})[0];
+        if(kurs) copyToClipboardKurs(kurs);
+      }} else if(copy==='workshops'){{
+        var ws = state.workshops.filter(function(r){{return r.id===id;}})[0];
+        if(ws) copyToClipboardWs(ws);
+      }}
+      return;
+    }}
+  }});
+
+  // ---- JSON Export/Import -------------------------------------------------
+  function exportJSON() {{
+    var data = JSON.parse(JSON.stringify(state));
+    var blob = new Blob([JSON.stringify(data, null, 2)], {{ type: 'application/json' }});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'programm_zf-programm-' + state.planjahr + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showNotification('Export erfolgreich ✓');
+  }}
+  
+  function importJSON() {{
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.addEventListener('change', function(e) {{
+      var file = e.target.files[0];
+      if (!file) return;
+      
+      var reader = new FileReader();
+      reader.onload = function(e) {{
+        try {{
+          var data = JSON.parse(e.target.result);
+          if (data && data.kurse && data.workshops && data.sperr) {{
+            state = data;
+            g('programm_planjahr').value = state.planjahr;
+            g('programm_sollWk').value = state.sollWk;
+            g('programm_sollWs').value = state.sollWs;
+            renderAll();
+            showNotification('Import erfolgreich ✓');
+          }} else {{
+            showNotification('Ungültige JSON-Datei');
+          }}
+        }} catch (e) {{
+          showNotification('Fehler beim Import: ' + e.message);
+        }}
+      };
+      reader.readAsText(file);
+    }});
+    input.click();
+  }}
+
+  // ---- Szenarien --------------------------------------------------------
+  var KEY='zf_programm_zf_wien_programm_v1';
+  function store(){{ try{{ return JSON.parse(localStorage.getItem(KEY))||{{}}; }}catch(e){{ return {{}}; }} }}
+  function saveStore(o){{ try{{ localStorage.setItem(KEY, JSON.stringify(o)); }}catch(e){{}} }}
+  function refreshList(sel){{ 
+    var o=store(), s=g('programm_scen'); s.innerHTML='<option value="">— gespeicherte —</option>';
+    Object.keys(o).sort().forEach(function(n){{ var op=document.createElement('option'); op.value=n; op.textContent=n; if(n===sel)op.selected=true; s.appendChild(op); }});
+  }}
+  g('programm_btnSave').addEventListener('click', function(){{
+    var name=prompt('Szenario-Name (z. B. „SS 2026 Entwurf"):'); if(!name) return;
+    var o=store(); o[name]=JSON.parse(JSON.stringify(state)); saveStore(o); refreshList(name);
+  }});
+  g('programm_btnLoad').addEventListener('click', function(){{
+    var name=g('programm_scen').value; if(!name) return; var o=store(); if(!o[name]) return;
+    state=JSON.parse(JSON.stringify(o[name]));
+    g('programm_planjahr').value=state.planjahr;
+    g('programm_sollWk').value=state.sollWk; g('programm_sollWs').value=state.sollWs;
+    renderAll();
+  }});
+  g('programm_btnDel').addEventListener('click', function(){{
+    var name=g('programm_scen').value; if(!name) return; if(!confirm('Szenario "'+name+'" löschen?')) return;
+    var o=store(); delete o[name]; saveStore(o); refreshList('');
+  }});
+  g('programm_btnReset').addEventListener('click', function(){{
+    if(!confirm('Auf Startwerte zurücksetzen? Nicht gespeicherte Eingaben gehen verloren.')) return;
+    state=freshState(); 
+    g('programm_planjahr').value=state.planjahr;
+    g('programm_sollWk').value=state.sollWk; 
+    g('programm_sollWs').value=state.sollWs; 
+    renderAll();
+  }});
+  
+  g('programm_btnExport').addEventListener('click', exportJSON);
+  g('programm_btnImport').addEventListener('click', importJSON);
+  
+  g('programm_planjahr').value = state.planjahr;
+  g('programm_sollWk').value = state.sollWk;
+  g('programm_sollWs').value = state.sollWs;
+  
+  programm_initCollapsibleCards();
+  setupSorting();
+  
+  g('programm_addSperr').addEventListener('click', function(){{ state.sperr.push({{id:uid(),name:'Neue Sperrzeit',von:'',bis:''}}); renderSperr(); }});
+  g('programm_addKurs').addEventListener('click', function() {{
+    var newKurs = {{id:uid(),titel:'Neuer Kurs',dozent:'',tag:3,zeit:'18:00',start:'',sessions:7,std:3,raum:'',inFerien:false,eingetragen:false}};
+    renderKursDetail(newKurs, true);
+  }});
+  g('programm_addWs').addEventListener('click', function() {{
+    var newWs = {{id:uid(),titel:'Neuer Workshop',dozent:'',start:'',tage:1,zeiten:[{{von:'10:00',bis:'17:00'}}],raum:'',eingetragen:false}};
+    renderWsDetail(newWs, true);
+  }});
+  
+  refreshList('');
+  renderAll();
+}})();
+
+</script>
+</body>
+</html>
