@@ -27,6 +27,11 @@ Stundenplan-Entwurfstool vor der CMS-Eintragung.
 | **Autovervollständigung** | Bereits verwendete Dozent:innen und Titel werden über alle Jahre als Vorschläge angeboten (`<datalist>`) |
 | **Sperrzeiten** | Editierbare Ferien/Schließzeiten (Wien vorbefüllt, global über alle Jahre), ein-/ausklappbar |
 | **Status-Spalte** | Eingetragen-Status als gut sichtbarer Punkt direkt nach dem Titel (grün = eingetragen, grau = offen) |
+| **Status-Filter** | Umschalter **Alle · Nur offen · Nur eingetragen** (filtert beide Listen) mit Zähler „X von Y noch nicht eingetragen" und Button „Offene kopieren" für die CMS-Sitzung |
+| **Raum- & Abendbelegung** | Einklappbares Wochengitter (Räume × Mo–Sa) aus den Kursdaten; zeitliche Doppelbelegung rot markiert, freie Abende sichtbar; Workshops separat nach Datum |
+| **Finanz-Annahmen** | Pro Planjahr: Kurspreis, Dozentenhonorar, Material, Ø-TN Wochenkurse/Workshops (netto); per Button aus dem Wien-Rechner übernehmbar |
+| **Honorar- & DB-Vorschau** | Deckungsbeitrag je Kurs/Workshop nach **demselben Modell** wie der Standortrechner (nur Termine/Tage im Planjahr); kompakte DB-Spalte in den Listen, volle Aufschlüsselung im Detail, Summen-Panel und Cross-Check gegen die Rechner-Annahme |
+| **Pro-Eintrag-Overrides** | Optionales Honorar/Ø-TN je Kurs/Workshop (leer ⇒ Jahres-Default) — überschreibt die Annahme nur für diesen Eintrag |
 | **Soll-Ist-Abgleich** | Jahresgenau: nur Termine/Tage im Planjahr zählen |
 | **Soll aus Wien-Rechner** | Button überträgt die Planstunden des Wien-Standortrechners (Wochenkurse → Soll Kurse, Wochenend- + Ferien-Workshops → Soll Workshops) |
 | **Konfliktprüfung** | Raum- und Dozenten-Doppelbelegungen auf Datumsebene |
@@ -79,7 +84,7 @@ Eine Datei, drei IIFE-Blöcke (je Tool), ein gemeinsamer `<style>`-Block und ein
 - **`PERSIST_IDS`** pro IIFE — steuert Live-Update (Event-Listener), Szenarien (speichern/laden) und Zurücksetzen. Jedes neue Eingabefeld muss dort eingetragen werden.
 - **Wien:** `computeAll(overrides)` ist die einzige Rechenfunktion. `render()` zeigt sie an. Die Hebel-Analyse ruft `computeAll` mehrfach mit kleinen `overrides` auf — sauber erweiterbar um weitere Hebel.
 - **Graz:** `calc()` rendert das Einzeljahr und ruft `updateProjection()` auf. Die Projektion nutzt `pCourse / pAfter / pTeam / projYear` mit je eigenem Auslastungs-/Fixum-/Miet-Override.
-- **Programmplanung:** IIFE mit `state`-Objekt in **Jahres-Struktur**: `{ planjahr, sperr:[…], jahre:{ "2027":{ sollWk, sollWs, kurse:[…], workshops:[…] } } }`. `sperr` und `planjahr` sind global, alles andere liegt pro Jahr. Helfer `cur()` liefert das aktuelle Jahr, `ensureYear(y)` legt fehlende Jahre an, `normalize(s)` hebt altes flaches Format an. `persist()` sichert den ganzen `state` nach jeder Mutation (`zf_programm_v2`). `renderAll()` → `renderKurse()`, `renderWs()`, `renderSperr()`, `updateDataLists()`, `recompute()`.
+- **Programmplanung:** IIFE mit `state`-Objekt in **Jahres-Struktur**: `{ planjahr, sperr:[…], jahre:{ "2027":{ sollWk, sollWs, preis, honorar, material, tnWk, tnWs, kurse:[…], workshops:[…] } } }`. `sperr` und `planjahr` sind global, alles andere (Soll **und** Finanz-Annahmen) liegt pro Jahr. Helfer `cur()` liefert das aktuelle Jahr, `ensureYear(y)` legt fehlende Jahre an (inkl. Finanz-Defaults), `normalize(s)` hebt altes flaches Format an. `persist()` sichert den ganzen `state` nach jeder Mutation (`zf_programm_v2`). `renderAll()` → `renderKurse()`, `renderWs()`, `renderBelegung()`, `renderSperr()`, `updateDataLists()`, `recompute()` (das wiederum `renderDbPreview()` aufruft). Die **DB-Berechnung** (`calcKurs`/`calcWsEntry` → `calcDB`) nutzt dasselbe Modell wie der Standortrechner und zählt nur Termine/Tage im Planjahr; Pro-Eintrag-Felder `honorar`/`tn` überschreiben die Jahres-Defaults aus `fin()`.
 
 ## Erweitern
 
@@ -95,6 +100,12 @@ Eine Datei, drei IIFE-Blöcke (je Tool), ein gemeinsamer `<style>`-Block und ein
 ---
 
 ## Versionshistorie
+
+### Single-File-App (v1.3) – 2026-06-24
+- Programmplanung: **Status-Filter** (Alle · Nur offen · Nur eingetragen) mit Offen-Zähler und „Offene kopieren"-Sammelexport
+- Programmplanung: **Raum- & Abendbelegung** — einklappbares Wochengitter (Räume × Mo–Sa) mit Doppelbelegungs-Markierung; Workshops separat nach Datum
+- Programmplanung: **Honorar- & DB-Vorschau** — Deckungsbeitrag je Eintrag nach demselben Modell wie der Standortrechner (nur Termine/Tage im Planjahr), DB-Spalte in den Listen, Detail-Aufschlüsselung, Summen-Panel und Cross-Check gegen die Wien-Rechner-Annahme
+- Programmplanung: **Finanz-Annahmen pro Planjahr** (Preis/Honorar/Material/Ø-TN), aus dem Wien-Rechner übernehmbar; optionale **Pro-Eintrag-Overrides** (Honorar/Ø-TN)
 
 ### Single-File-App (v1.2) – 2026-06-24
 - Programmplanung: **Pro-Planjahr-Datenmodell** (`state.jahre`) — Kurse, Workshops und Soll je Jahr getrennt; Vorjahr beim Wechsel optional als Vorlage kopierbar
