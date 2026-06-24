@@ -197,6 +197,9 @@
 .tab-button:hover{color:var(--ink); border-color:var(--line);}
 .tab-button.active{color:var(--accent); border-color:var(--accent);}
 
+/* Programmplanung: breiterer Content-Bereich */
+#wien-programm .wrap{max-width:1120px;}
+
 /* Fußzeilen: nur für aktiven Tab */
 .tab-content .bar{
   position:fixed; left:0; right:0; bottom:0;
@@ -699,6 +702,7 @@
       <thead>
         <tr>
           <th data-sort="titel">Titel</th>
+          <th class="status">St.</th>
           <th data-sort="dozent">Dozent</th>
           <th data-sort="tag">Tag</th>
           <th data-sort="zeit">Uhrzeit</th>
@@ -708,7 +712,6 @@
           <th data-sort="raum">Raum</th>
           <th data-sort="total">Stunden ges.</th>
           <th data-sort="ende">Ende</th>
-          <th class="status">Status</th>
           <th class="actions">Aktionen</th>
         </tr>
       </thead>
@@ -728,13 +731,13 @@
       <thead>
         <tr>
           <th data-sort="titel">Titel</th>
+          <th class="status">St.</th>
           <th data-sort="dozent">Dozent</th>
           <th data-sort="start">Start</th>
           <th data-sort="tage">Tage</th>
           <th data-sort="zeiten">Uhrzeiten</th>
           <th data-sort="raum">Raum</th>
           <th data-sort="total">Stunden ges.</th>
-          <th class="status">Status</th>
           <th class="actions">Aktionen</th>
         </tr>
       </thead>
@@ -1517,6 +1520,7 @@ function programm_initCollapsibleCards() {
       
       h+='<tr data-id="'+k.id+'">'+
         '<td data-col="titel">'+esc(k.titel)+'</td>'+
+        '<td class="status"><span class="dot '+ (k.eingetragen ? '' : 'empty') +'" title="'+(k.eingetragen?'eingetragen':'offen')+'"></span></td>'+
         '<td data-col="dozent">'+esc(k.dozent)+'</td>'+
         '<td data-col="tag">'+tagName+'</td>'+
         '<td data-col="zeit">'+(k.zeit||'')+'</td>'+
@@ -1526,7 +1530,6 @@ function programm_initCollapsibleCards() {
         '<td data-col="raum">'+esc(k.raum)+'</td>'+
         '<td data-col="total">'+nf.format(totalHours)+'</td>'+
         '<td data-col="ende">'+endDate+'</td>'+
-        '<td class="status"><span class="dot '+ (k.eingetragen ? '' : 'empty') +'"></span></td>'+
         '<td class="actions">'+
           '<button class="edit" data-edit="kurse" data-id="'+k.id+'">Bearbeiten</button>'+
           '<button class="copy" data-copy="kurse" data-id="'+k.id+'">Kopieren</button>'+
@@ -1584,13 +1587,13 @@ function programm_initCollapsibleCards() {
       
       h+='<tr data-id="'+w.id+'">'+
         '<td data-col="titel">'+esc(w.titel)+'</td>'+
+        '<td class="status"><span class="dot '+ (w.eingetragen ? '' : 'empty') +'" title="'+(w.eingetragen?'eingetragen':'offen')+'"></span></td>'+
         '<td data-col="dozent">'+esc(w.dozent)+'</td>'+
         '<td data-col="start">'+dateInfo+'</td>'+
         '<td data-col="tage">'+(w.tage||1)+'</td>'+
         '<td data-col="zeiten">'+zeitenStr+'</td>'+
         '<td data-col="raum">'+esc(w.raum)+'</td>'+
         '<td data-col="total">'+nf.format(totalHours)+'</td>'+
-        '<td class="status"><span class="dot '+ (w.eingetragen ? '' : 'empty') +'"></span></td>'+
         '<td class="actions">'+
           '<button class="edit" data-edit="workshops" data-id="'+w.id+'">Bearbeiten</button>'+
           '<button class="copy" data-copy="workshops" data-id="'+w.id+'">Kopieren</button>'+
