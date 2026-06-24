@@ -225,6 +225,7 @@
 .rentbox{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:14px 0 0; padding:12px 14px; background:var(--card); border-radius:var(--r); font-size:13px;}
 .rentbox label{color:var(--muted); font-weight:600;}
 .rentbox .hint{color:var(--muted); font-size:12px;}
+.warn-hint{font-size:11px; color:var(--warn); font-weight:600;}
 </style>
 </head>
 <body>
@@ -1404,16 +1405,40 @@ function programm_initCollapsibleCards() {
     if(!inFerien && isInSperr(d)) return true;
     return false;
   }
+  function feiertagName(d){
+    var list=feiertage(d.getFullYear());
+    for(var i=0;i<list.length;i++) if(sameDay(d,list[i].d)) return list[i].n;
+    return null;
+  }
+  function sperrName(d){
+    for(var i=0;i<state.sperr.length;i++){
+      var v=parseD(state.sperr[i].von), b=parseD(state.sperr[i].bis);
+      if(v&&b&&d>=v&&d<=b) return state.sperr[i].name;
+    }
+    return null;
+  }
   // Sitzungstermine erzeugen: ausgesetzte Wochen werden übersprungen (Kurs verlängert sich)
   function genDates(startStr, weekday, n, inFerien){
-    var d=parseD(startStr); if(!d||!n) return [];
+    return genDatesFull(startStr, weekday, n, inFerien).dates;
+  }
+  function genDatesFull(startStr, weekday, n, inFerien){
+    var d=parseD(startStr); if(!d||!n) return {dates:[],skipped:[]};
     var guard=0; while(d.getDay()!==weekday && guard<7){ d=addDays(d,1); guard++; }
-    var out=[]; guard=0;
-    while(out.length<n && guard<520){
-      if(!blockedForCourse(d, inFerien)) out.push(new Date(d));
-      d=addDays(d,7); guard++;
+    var dates=[], allSkipped=[], g2=0;
+    while(dates.length<n && g2<520){
+      if(!blockedForCourse(d, inFerien)){
+        dates.push(new Date(d));
+      } else {
+        var fn=feiertagName(d), sn=(!inFerien?sperrName(d):null);
+        var reason=fn&&sn?fn+' / '+sn:(fn||sn||'gesperrt');
+        allSkipped.push({date:new Date(d), reason:reason});
+      }
+      d=addDays(d,7); g2++;
     }
-    return out;
+    var skipped=dates.length>0
+      ? allSkipped.filter(function(s){return s.date>dates[0]&&s.date<dates[dates.length-1];})
+      : [];
+    return {dates:dates, skipped:skipped};
   }
   function toMin(t){ if(!t) return null; var p=t.split(':'); return (+p[0])*60+(+p[1]); }
   
@@ -1515,13 +1540,20 @@ function programm_initCollapsibleCards() {
     // Tabellenzeilen generieren
     var h='';
     sorted.forEach(function(k){
-      var dates = genDates(k.start, +k.tag, +k.sessions, !!k.inFerien);
+      var full = genDatesFull(k.start, +k.tag, +k.sessions, !!k.inFerien);
+      var dates = full.dates, skipped = full.skipped;
       var totalHours = (+k.sessions) * (+k.std);
       var endDate = dates.length > 0 ? fmt(dates[dates.length-1]) : '—';
       var tagName = WD[+k.tag] || k.tag;
-      
+      var warnHint = '';
+      if(skipped.length>0){
+        var reasons=[]; skipped.forEach(function(s){if(reasons.indexOf(s.reason)<0)reasons.push(s.reason);});
+        var tip=skipped.map(function(s){return fmt(s.date)+' ('+s.reason+')';}).join('; ');
+        warnHint='<br><span class="warn-hint" title="'+tip+'">&#9888; '+skipped.length+' unterrichtsfreier Termin'+(skipped.length!==1?'e':'')+' ('+reasons.join(', ')+')</span>';
+      }
+
       h+='<tr data-id="'+k.id+'">'+
-        '<td data-col="titel">'+esc(k.titel)+'</td>'+
+        '<td data-col="titel">'+esc(k.titel)+warnHint+'</td>'+
         '<td class="status"><span class="dot '+ (k.eingetragen ? '' : 'empty') +'" title="'+(k.eingetragen?'eingetragen':'offen')+'"></span></td>'+
         '<td data-col="dozent">'+esc(k.dozent)+'</td>'+
         '<td data-col="tag">'+tagName+'</td>'+
@@ -1826,10 +1858,11 @@ function programm_initCollapsibleCards() {
   
   // ---- Kopieren-Funktionen ----------------------------------------
   function copyToClipboardKurs(kurs) {
-    var dates = genDates(kurs.start, +kurs.tag, +kurs.sessions, !!kurs.inFerien);
+    var full = genDatesFull(kurs.start, +kurs.tag, +kurs.sessions, !!kurs.inFerien);
+    var dates = full.dates, skipped = full.skipped;
     var dateStrs = dates.map(function(d) { return fmt(d); });
     var totalHours = (+kurs.sessions) * (+kurs.std);
-    
+
     // Endzeit berechnen: Startzeit + Std/Termin
     var endZeit = '';
     if (kurs.zeit && kurs.std) {
@@ -1841,13 +1874,18 @@ function programm_initCollapsibleCards() {
         endZeit = (kurs.zeit||'?') + '–' + pad(endH) + ':' + pad(endM);
       }
     }
-    
-    var text = 
+
+    var skippedLine = skipped.length>0
+      ? 'Unterrichtsfreie Termine: '+skipped.map(function(s){return fmt(s.date)+' ('+s.reason+')';}).join(', ')+'\n'
+      : '';
+
+    var text =
       kurs.titel + ' — Dozent: ' + (kurs.dozent || '?') + '\n' +
       WD[+kurs.tag] + ' ' + endZeit + ' · Raum ' + (kurs.raum||'?') + '\n' +
       kurs.sessions + ' Termine: ' + dateStrs.join(', ') + '\n' +
+      skippedLine +
       nf.format(totalHours) + ' Stunden gesamt';
-    
+
     copyToClipboard(text);
   }
   
