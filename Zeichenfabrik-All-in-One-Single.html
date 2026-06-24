@@ -651,7 +651,7 @@
 
 <!-- SPERRZEITEN -->
 <div class="card collapsible" id="programm_sperrCard">
-  <div class="card-header" onclick="programm_toggleCard('sperrCard')">
+  <div class="card-header" onclick="programm_toggleCard('programm_sperrCard')">
     <h2>Sperrzeiten (Ferien &amp; Schließzeiten)</h2>
     <span class="toggle">▼</span>
   </div>
@@ -811,7 +811,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function eurNeg(n){return '−'+nf.format(Math.round(Math.abs(n)))+' €';}
   function eurSign(n){return (n>=0?'+':'−')+nf.format(Math.round(Math.abs(n)))+' €';}
   function g(id){return document.getElementById(id);}
-  function num(id){return parseFloat(g(id).value)||0;}
+  function num(id){ var el=g(id); return el ? parseFloat(el.value)||0 : 0; }
 
   // ---- zentrale Rechnung; ov = optionale Overrides (für Hebel-Analyse) --
   function v(ov,id){ return (id in ov)? ov[id] : num(id); }
@@ -823,9 +823,9 @@ document.addEventListener('DOMContentLoaded', function() {
       var ums=realH*v(ov,tn)*price;
       return {ums:ums, db:ums-realH*(hon+matH), realH:realH};
     }
-    var wk=course('wkPs','wkR','wkTn');
-    var we=course('wePs','weR','weTn');
-    var fe=course('fePs','feR','feTn');
+    var wk=course('wien_wkPs','wien_wkR','wien_wkTn');
+    var we=course('wien_wePs','wien_weR','wien_weTn');
+    var fe=course('wien_fePs','wien_feR','wien_feTn');
     var ev=v(ov,'wien_teEv');
     var teUms=ev*v(ov,'wien_teTn')*v(ov,'wien_tePrice');
     var teDB=teUms-ev*(v(ov,'wien_teHon')+v(ov,'wien_teTn')*v(ov,'wien_teMat'));
@@ -892,18 +892,18 @@ document.addEventListener('DOMContentLoaded', function() {
     var base=R.ergVor;
     function delta(ov){ return computeAll(ov).ergVor - base; }
     function setH(id, d){ var e=g(id); e.textContent=eurSign(d); e.className='hv '+(d>=0?'pos':'neg'); }
-    setH('h-tn',   delta({wkTn:num('wien_wkTn')+1, weTn:num('wien_weTn')+1, feTn:num('wien_feTn')+1}));
-    setH('h-real', delta({wkR:num('wien_wkR')+5, weR:num('wien_weR')+5, feR:num('wien_feR')+5}));
-    setH('h-room', delta({wkPs:num('wien_wkPs')+336}));
-    setH('h-price',delta({price:num('wien_price')+1}));
-    setH('h-hon',  delta({hon:num('wien_hon')-1}));
+    setH('h-tn',   delta({wien_wkTn:num('wien_wkTn')+1, wien_weTn:num('wien_weTn')+1, wien_feTn:num('wien_feTn')+1}));
+    setH('h-real', delta({wien_wkR:num('wien_wkR')+5, wien_weR:num('wien_weR')+5, wien_feR:num('wien_feR')+5}));
+    setH('h-room', delta({wien_wkPs:num('wien_wkPs')+336}));
+    setH('h-price',delta({wien_price:num('wien_price')+1}));
+    setH('h-hon',  delta({wien_hon:num('wien_hon')-1}));
   }
 
   // ---- Eingabe-IDs (Live-Update, Szenarien, Reset) ----------------------
-  var PERSIST_IDS=['price','hon','matKurse','betPct',
-    'wkPs','wkR','wkTn','wkTerm','wkSh','wePs','weR','weTn','weH','fePs','feR','feTn','feH',
-    'teEv','teTn','tePrice','teHon','teMat','gUms','gFremd',
-    'fx','wv','betrieb','miete','entnahme'];
+  var PERSIST_IDS=['wien_price','wien_hon','wien_matKurse','wien_betPct',
+    'wien_wkPs','wien_wkR','wien_wkTn','wien_wkTerm','wien_wkSh','wien_wePs','wien_weR','wien_weTn','wien_weH','wien_fePs','wien_feR','wien_feTn','wien_feH',
+    'wien_teEv','wien_teTn','wien_tePrice','wien_teHon','wien_teMat','wien_gUms','wien_gFremd',
+    'wien_fx','wien_wv','wien_betrieb','wien_miete','wien_entnahme'];
   PERSIST_IDS.forEach(function(id){ g(id).addEventListener('input', render); });
 
   var DEFAULTS={}; PERSIST_IDS.forEach(function(id){ DEFAULTS[id]=g(id).value; });
@@ -912,7 +912,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // ---- Szenarien (localStorage; still degradierend falls nicht verfügbar) ----
-  var KEY='zf_wien_zf_wien_scenarios_v1';
+  var KEY='zf_wien_scenarios_v1';
   function loadStore(){ try{ return JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ return {}; } }
   function saveStore(o){ try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(e){} }
   function refreshList(sel){
@@ -1013,7 +1013,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function eur(n){var r=Math.round(n);return (r<0?'−':'')+nf.format(Math.abs(r))+' €';}
   function eurNeg(n){return '−'+nf.format(Math.round(Math.abs(n)))+' €';}
   function g(id){return document.getElementById(id);}
-  function num(id){return parseFloat(g(id).value)||0;}
+  function num(id){ var el=g(id); return el ? parseFloat(el.value)||0 : 0; }
 
   // ---- eine Kursschicht rechnen + rendern -------------------------------
   function courseLayer(prefix, hpc, unit, perSem){
@@ -1038,9 +1038,9 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function calc(){
-    var wk=courseLayer('wk', num('graz_wkTerm')*num('graz_wkSh'), 'Kurse', true);
-    var we=courseLayer('we', num('graz_weH'), 'Workshops', false);
-    var fe=courseLayer('fe', num('graz_feH'), 'Workshops', false);
+    var wk=courseLayer('graz_wk', num('graz_wkTerm')*num('graz_wkSh'), 'Kurse', true);
+    var we=courseLayer('graz_we', num('graz_weH'), 'Workshops', false);
+    var fe=courseLayer('graz_fe', num('graz_feH'), 'Workshops', false);
 
     // ---- Nachmittag (Eventbetrieb) ----
     var walk=num('graz_nmWalk')/100, pG=num('graz_nmPrice'), guest=num('graz_nmGuest');
@@ -1131,29 +1131,29 @@ document.addEventListener('DOMContentLoaded', function() {
   function updateProjection(){
     var cum=0;
     for(var y=1;y<=3;y++){
-      var r=projYear(num('y'+y+'Util')/100, num('y'+y+'Walk')/100, num('y'+y+'Ev'), num('y'+y+'Fix'));
-      var rent=num('y'+y+'Rent'), erg=r.vor-12*rent; cum+=erg;
-      g('p'+y+'-net').textContent=eur(r.net);
-      g('p'+y+'-db').textContent=eur(r.db);
-      g('p'+y+'-lc').textContent=eurNeg(r.lc);
-      g('p'+y+'-wv').textContent=eurNeg(num('graz_wv'));
-      g('p'+y+'-be2').textContent=eurNeg(num('graz_betrieb'));
-      g('p'+y+'-vor').textContent=eur(r.vor);
-      g('p'+y+'-bem').textContent=r.vor>0?(eur(r.vor/12)+'/M'):'—';
-      g('p'+y+'-rent').textContent=eurNeg(12*rent);
-      g('p'+y+'-erg').textContent=(erg>=0?'+':'')+eur(erg);
-      g('p'+y+'-erg').className='pv '+(erg>=0?'pos':'neg');
+      var r=projYear(num('graz_y'+y+'Util')/100, num('graz_y'+y+'Walk')/100, num('graz_y'+y+'Ev'), num('graz_y'+y+'Fix'));
+      var rent=num('graz_y'+y+'Rent'), erg=r.vor-12*rent; cum+=erg;
+      g('graz_p'+y+'-net').textContent=eur(r.net);
+      g('graz_p'+y+'-db').textContent=eur(r.db);
+      g('graz_p'+y+'-lc').textContent=eurNeg(r.lc);
+      g('graz_p'+y+'-wv').textContent=eurNeg(num('graz_wv'));
+      g('graz_p'+y+'-be2').textContent=eurNeg(num('graz_betrieb'));
+      g('graz_p'+y+'-vor').textContent=eur(r.vor);
+      g('graz_p'+y+'-bem').textContent=r.vor>0?(eur(r.vor/12)+'/M'):'—';
+      g('graz_p'+y+'-rent').textContent=eurNeg(12*rent);
+      g('graz_p'+y+'-erg').textContent=(erg>=0?'+':'')+eur(erg);
+      g('graz_p'+y+'-erg').className='pv '+(erg>=0?'pos':'neg');
     }
     g('graz_p-cum').textContent=(cum>=0?'+':'')+eur(cum);
     g('graz_p-cum').className='db '+(cum>=0?'pos':'neg');
   }
 
   // ---- alle Eingabe-IDs (für Live-Update + Szenarien) -------------------
-  var PERSIST_IDS=['wkPs','wkR','wkTn','wkTerm','wkSh','wePs','weR','weTn','weH',
-    'fePs','feR','feTn','feH','nmWalk','nmPrice','nmGuest','nmSess','nmWeeks','nmCap','nmMat',
-    'teEv','teTn','tePrice','teHon','teMat','matKurse','fx','wv','betrieb','rent','m2','ppm',
-    'y1Util','y1Walk','y1Ev','y1Fix','y1Rent','y2Util','y2Walk','y2Ev','y2Fix','y2Rent',
-    'y3Util','y3Walk','y3Ev','y3Fix','y3Rent'];
+  var PERSIST_IDS=['graz_wkPs','graz_wkR','graz_wkTn','graz_wkTerm','graz_wkSh','graz_wePs','graz_weR','graz_weTn','graz_weH',
+    'graz_fePs','graz_feR','graz_feTn','graz_feH','graz_nmWalk','graz_nmPrice','graz_nmGuest','graz_nmSess','graz_nmWeeks','graz_nmCap','graz_nmMat',
+    'graz_teEv','graz_teTn','graz_tePrice','graz_teHon','graz_teMat','graz_matKurse','graz_fx','graz_wv','graz_betrieb','graz_rent','graz_m2','graz_ppm',
+    'graz_y1Util','graz_y1Walk','graz_y1Ev','graz_y1Fix','graz_y1Rent','graz_y2Util','graz_y2Walk','graz_y2Ev','graz_y2Fix','graz_y2Rent',
+    'graz_y3Util','graz_y3Walk','graz_y3Ev','graz_y3Fix','graz_y3Rent'];
   PERSIST_IDS.forEach(function(id){ g(id).addEventListener('input', calc); });
 
   // ---- €/m² übernehmen ----
@@ -1168,7 +1168,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // ---- Szenarien (localStorage, fällt still zurück falls nicht verfügbar) ----
-  var KEY='zf_graz_zf_graz_scenarios_v1';
+  var KEY='zf_graz_scenarios_v1';
   function loadStore(){ try{ return JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ return {}; } }
   function saveStore(o){ try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(e){} }
   function refreshList(sel){
@@ -1276,7 +1276,7 @@ function programm_toggleCard(cardId) {
 function programm_initCollapsibleCards() {
   // Sperrzeiten-Karte: standardmäßig eingeklappt
   try {
-    var card = document.getElementById('sperrCard');
+    var card = document.getElementById('programm_sperrCard');
     if (card) {
       var collapsed = localStorage.getItem('zf_sperr_collapsed');
       if (collapsed === '1') {
@@ -1289,7 +1289,7 @@ function programm_initCollapsibleCards() {
     }
   } catch(e) {
     // Falls localStorage nicht verfügbar
-    var card = document.getElementById('sperrCard');
+    var card = document.getElementById('programm_sperrCard');
     if (card) card.classList.add('collapsed');
   }
 }
@@ -1510,7 +1510,7 @@ function programm_initCollapsibleCards() {
     g('programm_kursList').innerHTML=h || '<tr><td colspan="12" style="text-align:center; color:var(--muted);">Keine Wochenkurse</td></tr>';
     
     // Sortier-Indikatoren aktualisieren
-    document.querySelectorAll('#kursTable th').forEach(function(th) {
+    document.querySelectorAll('#programm_kursTable th').forEach(function(th) {
       th.classList.remove('sorted-asc', 'sorted-desc');
       if (th.getAttribute('data-sort') === sortState.kurs.col) {
         th.classList.add(sortState.kurs.asc ? 'sorted-asc' : 'sorted-desc');
@@ -1574,7 +1574,7 @@ function programm_initCollapsibleCards() {
     g('programm_wsList').innerHTML=h || '<tr><td colspan="9" style="text-align:center; color:var(--muted);">Keine Workshops</td></tr>';
     
     // Sortier-Indikatoren aktualisieren
-    document.querySelectorAll('#wsTable th').forEach(function(th) {
+    document.querySelectorAll('#programm_wsTable th').forEach(function(th) {
       th.classList.remove('sorted-asc', 'sorted-desc');
       if (th.getAttribute('data-sort') === sortState.ws.col) {
         th.classList.add(sortState.ws.asc ? 'sorted-asc' : 'sorted-desc');
@@ -1828,22 +1828,14 @@ function programm_initCollapsibleCards() {
   }
   
   function copyToClipboard(text) {
-    var success = false;
     try {
       navigator.clipboard.writeText(text).then(function() {
         showNotification('Kopiert ✓');
-        success = true;
-      }).catch(function(e) {
+      }).catch(function() {
         fallbackCopy(text);
       });
     } catch (e) {
       fallbackCopy(text);
-    }
-    
-    if (!success) {
-      setTimeout(function() {
-        if (!success) fallbackCopy(text);
-      }, 100);
     }
   }
   
@@ -1981,20 +1973,20 @@ function programm_initCollapsibleCards() {
     g('programm_b-ws').innerHTML=nf.format(sumWsYear)+' / '+nf.format(state.sollWs)+' h '+badge(dWs);
     g('programm_b-konf').innerHTML = konf.length? '<span class="neg">'+konf.length+'</span>' : '<span class="pos">0</span>';
   }
-  function row(label, ist, soll, d){{
+  function row(label, ist, soll, d){
     var cls = Math.abs(d) <= Math.max(5, soll*0.03) ? 'pos' : (d<0?'warnc':'pos');
     return '<div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:5px;">'+
       '<span>'+label+'</span><span style="font-variant-numeric:tabular-nums;">geplant '+nf.format(ist)+
       ' h · Soll '+nf.format(soll)+' h · <b class="'+cls+'">'+(d>=0?'+':'')+nf.format(d)+' h</b></span></div>';
-  }}
-  function badge(d){{
+  }
+  function badge(d){
     if(Math.abs(d)<=5) return '<span class="pos">✓</span>';
     return '<span class="'+(d<0?'warnc':'pos')+'">'+(d>=0?'+':'')+nf.format(d)+'</span>';
-  }}
+  }
 
   // ---- Tabellen-Sortierung ------------------------------------------------
   function setupSorting() {
-    document.querySelectorAll('#kursTable th[data-sort]').forEach(function(th) {
+    document.querySelectorAll('#programm_kursTable th[data-sort]').forEach(function(th) {
       th.addEventListener('click', function() {
         var col = this.getAttribute('data-sort');
         if (sortState.kurs.col === col) {
@@ -2006,8 +1998,8 @@ function programm_initCollapsibleCards() {
         renderKurse();
       });
     });
-    
-    document.querySelectorAll('#wsTable th[data-sort]').forEach(function(th) {
+
+    document.querySelectorAll('#programm_wsTable th[data-sort]').forEach(function(th) {
       th.addEventListener('click', function() {
         var col = this.getAttribute('data-sort');
         if (sortState.ws.col === col) {
@@ -2024,82 +2016,82 @@ function programm_initCollapsibleCards() {
   // ---- Eingaben ---------------------------------------------------------
   document.addEventListener('input', onEdit);
   document.addEventListener('change', onEdit);
-  function onEdit(e){{
+  function onEdit(e){
     var t=e.target;
-    if(t.id==='programm_planjahr'){{ state.planjahr=+t.value||2026; recompute(); return; }}
-    if(t.id==='programm_sollWk'){{ state.sollWk=+t.value||0; recompute(); return; }}
-    if(t.id==='programm_sollWs'){{ state.sollWs=+t.value||0; recompute(); return; }}
+    if(t.id==='programm_planjahr'){ state.planjahr=+t.value||2026; recompute(); return; }
+    if(t.id==='programm_sollWk'){ state.sollWk=+t.value||0; recompute(); return; }
+    if(t.id==='programm_sollWs'){ state.sollWs=+t.value||0; recompute(); return; }
     var tbl=t.getAttribute&&t.getAttribute('data-t'), id=t.getAttribute&&t.getAttribute('data-id'), f=t.getAttribute&&t.getAttribute('data-f');
     if(!tbl||!id||!f) return;
-    var rec=state[tbl].filter(function(r){{return r.id===id;}})[0]; if(!rec) return;
+    var rec=state[tbl].filter(function(r){return r.id===id;})[0]; if(!rec) return;
     
-    if(f==='zeiten'){{
+    if(f==='zeiten'){
       var idx=+t.getAttribute('data-idx');
       var sub=t.getAttribute('data-sub');
       if(!rec.zeiten) rec.zeiten=[];
-      if(!rec.zeiten[idx]) rec.zeiten[idx]={{}};
+      if(!rec.zeiten[idx]) rec.zeiten[idx]={};
       rec.zeiten[idx][sub]=t.value;
-    }} else {{
+    } else {
       rec[f] = (t.type==='checkbox')? t.checked : t.value;
-    }}
+    }
     
-    if(f==='tage' && tbl==='workshops'){{
+    if(f==='tage' && tbl==='workshops'){
       var newTage=+t.value||1;
       if(!rec.zeiten) rec.zeiten=[];
-      while(rec.zeiten.length < newTage) {{
-        rec.zeiten.push({{von:'10:00', bis:'17:00'}});
-      }}
+      while(rec.zeiten.length < newTage) {
+        rec.zeiten.push({von:'10:00', bis:'17:00'});
+      }
       rec.zeiten.length=newTage;
-    }}
+    }
     
     recompute();
     if(f==='von'||f==='bis'||f==='start') renderFeiertage();
     if(tbl==='workshops' && (f==='tage'||f==='start'||f==='zeiten')) renderWs();
-  }}
+  }
   
   // Klick-Handler
-  document.addEventListener('click', function(e){{
+  document.addEventListener('click', function(e){
     var del=e.target.getAttribute&&e.target.getAttribute('data-del'); 
-    if(del){{
+    if(del){
       var id=e.target.getAttribute('data-id');
-      state[del]=state[del].filter(function(r){{return r.id!==id;}});
-      if(del==='sperr'){{ renderSperr(); renderFeiertage(); recompute(); }}
-      else if(del==='kurse'){{ renderKurse(); recompute(); }}
-      else {{ renderWs(); recompute(); }}
+      state[del]=state[del].filter(function(r){return r.id!==id;});
+      if(del==='sperr'){ renderSperr(); renderFeiertage(); recompute(); }
+      else if(del==='kurse'){ renderKurse(); recompute(); }
+      else { renderWs(); recompute(); }
       return;
-    }}
+    }
     
     var edit=e.target.getAttribute&&e.target.getAttribute('data-edit');
-    if(edit){{
+    if(edit){
       var id=e.target.getAttribute('data-id');
-      if(edit==='kurse'){{
-        var kurs = state.kurse.filter(function(r){{return r.id===id;}})[0];
+      if(edit==='kurse'){
+        var kurs = state.kurse.filter(function(r){return r.id===id;})[0];
         if(kurs) renderKursDetail(kurs, false);
-      }} else if(edit==='workshops'){{
-        var ws = state.workshops.filter(function(r){{return r.id===id;}})[0];
+      } else if(edit==='workshops'){
+        var ws = state.workshops.filter(function(r){return r.id===id;})[0];
         if(ws) renderWsDetail(ws, false);
-      }}
+      }
       return;
-    }}
+    }
     
     var copy=e.target.getAttribute&&e.target.getAttribute('data-copy');
-    if(copy){{
+    if(copy){
       var id=e.target.getAttribute('data-id');
-      if(copy==='kurse'){{
-        var kurs = state.kurse.filter(function(r){{return r.id===id;}})[0];
+      if(copy==='kurse'){
+        var kurs = state.kurse.filter(function(r){return r.id===id;})[0];
         if(kurs) copyToClipboardKurs(kurs);
-      }} else if(copy==='workshops'){{
-        var ws = state.workshops.filter(function(r){{return r.id===id;}})[0];
+      } else if(copy==='workshops'){
+        var ws = state.workshops.filter(function(r){return r.id===id;})[0];
         if(ws) copyToClipboardWs(ws);
-      }}
+      }
       return;
-    }}
-  }});
+    }
+  });
 
   // ---- JSON Export/Import -------------------------------------------------
-  function exportJSON() {{
+  function exportJSON() {
     var data = JSON.parse(JSON.stringify(state));
-    var blob = new Blob([JSON.stringify(data, null, 2)], {{ type: 'application/json' }});
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
@@ -2109,70 +2101,70 @@ function programm_initCollapsibleCards() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     showNotification('Export erfolgreich ✓');
-  }}
+  }
   
-  function importJSON() {{
+  function importJSON() {
     var input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json,application/json';
-    input.addEventListener('change', function(e) {{
+    input.addEventListener('change', function(e) {
       var file = e.target.files[0];
       if (!file) return;
       
       var reader = new FileReader();
-      reader.onload = function(e) {{
-        try {{
+      reader.onload = function(e) {
+        try {
           var data = JSON.parse(e.target.result);
-          if (data && data.kurse && data.workshops && data.sperr) {{
+          if (data && data.kurse && data.workshops && data.sperr) {
             state = data;
             g('programm_planjahr').value = state.planjahr;
             g('programm_sollWk').value = state.sollWk;
             g('programm_sollWs').value = state.sollWs;
             renderAll();
             showNotification('Import erfolgreich ✓');
-          }} else {{
+          } else {
             showNotification('Ungültige JSON-Datei');
-          }}
-        }} catch (e) {{
+          }
+        } catch (e) {
           showNotification('Fehler beim Import: ' + e.message);
-        }}
+        }
       };
       reader.readAsText(file);
-    }});
+    });
     input.click();
-  }}
+  }
 
   // ---- Szenarien --------------------------------------------------------
-  var KEY='zf_programm_zf_wien_programm_v1';
-  function store(){{ try{{ return JSON.parse(localStorage.getItem(KEY))||{{}}; }}catch(e){{ return {{}}; }} }}
-  function saveStore(o){{ try{{ localStorage.setItem(KEY, JSON.stringify(o)); }}catch(e){{}} }}
-  function refreshList(sel){{ 
+  var KEY='zf_wien_programm_v1';
+  function store(){ try{ return JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ return {}; } }
+  function saveStore(o){ try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(e){} }
+  function refreshList(sel){ 
     var o=store(), s=g('programm_scen'); s.innerHTML='<option value="">— gespeicherte —</option>';
-    Object.keys(o).sort().forEach(function(n){{ var op=document.createElement('option'); op.value=n; op.textContent=n; if(n===sel)op.selected=true; s.appendChild(op); }});
-  }}
-  g('programm_btnSave').addEventListener('click', function(){{
+    Object.keys(o).sort().forEach(function(n){ var op=document.createElement('option'); op.value=n; op.textContent=n; if(n===sel)op.selected=true; s.appendChild(op); });
+  }
+  g('programm_btnSave').addEventListener('click', function(){
     var name=prompt('Szenario-Name (z. B. „SS 2026 Entwurf"):'); if(!name) return;
     var o=store(); o[name]=JSON.parse(JSON.stringify(state)); saveStore(o); refreshList(name);
-  }});
-  g('programm_btnLoad').addEventListener('click', function(){{
+  });
+  g('programm_btnLoad').addEventListener('click', function(){
     var name=g('programm_scen').value; if(!name) return; var o=store(); if(!o[name]) return;
     state=JSON.parse(JSON.stringify(o[name]));
     g('programm_planjahr').value=state.planjahr;
     g('programm_sollWk').value=state.sollWk; g('programm_sollWs').value=state.sollWs;
     renderAll();
-  }});
-  g('programm_btnDel').addEventListener('click', function(){{
+  });
+  g('programm_btnDel').addEventListener('click', function(){
     var name=g('programm_scen').value; if(!name) return; if(!confirm('Szenario "'+name+'" löschen?')) return;
     var o=store(); delete o[name]; saveStore(o); refreshList('');
-  }});
-  g('programm_btnReset').addEventListener('click', function(){{
+  });
+  g('programm_btnReset').addEventListener('click', function(){
     if(!confirm('Auf Startwerte zurücksetzen? Nicht gespeicherte Eingaben gehen verloren.')) return;
     state=freshState(); 
     g('programm_planjahr').value=state.planjahr;
     g('programm_sollWk').value=state.sollWk; 
     g('programm_sollWs').value=state.sollWs; 
     renderAll();
-  }});
+  });
   
   g('programm_btnExport').addEventListener('click', exportJSON);
   g('programm_btnImport').addEventListener('click', importJSON);
@@ -2184,19 +2176,19 @@ function programm_initCollapsibleCards() {
   programm_initCollapsibleCards();
   setupSorting();
   
-  g('programm_addSperr').addEventListener('click', function(){{ state.sperr.push({{id:uid(),name:'Neue Sperrzeit',von:'',bis:''}}); renderSperr(); }});
-  g('programm_addKurs').addEventListener('click', function() {{
-    var newKurs = {{id:uid(),titel:'Neuer Kurs',dozent:'',tag:3,zeit:'18:00',start:'',sessions:7,std:3,raum:'',inFerien:false,eingetragen:false}};
+  g('programm_addSperr').addEventListener('click', function(){ state.sperr.push({id:uid(),name:'Neue Sperrzeit',von:'',bis:''}); renderSperr(); });
+  g('programm_addKurs').addEventListener('click', function() {
+    var newKurs = {id:uid(),titel:'Neuer Kurs',dozent:'',tag:3,zeit:'18:00',start:'',sessions:7,std:3,raum:'',inFerien:false,eingetragen:false};
     renderKursDetail(newKurs, true);
-  }});
-  g('programm_addWs').addEventListener('click', function() {{
-    var newWs = {{id:uid(),titel:'Neuer Workshop',dozent:'',start:'',tage:1,zeiten:[{{von:'10:00',bis:'17:00'}}],raum:'',eingetragen:false}};
+  });
+  g('programm_addWs').addEventListener('click', function() {
+    var newWs = {id:uid(),titel:'Neuer Workshop',dozent:'',start:'',tage:1,zeiten:[{von:'10:00',bis:'17:00'}],raum:'',eingetragen:false};
     renderWsDetail(newWs, true);
-  }});
+  });
   
   refreshList('');
   renderAll();
-}})();
+})();
 
 </script>
 </body>
