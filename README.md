@@ -1,127 +1,44 @@
 # Zeichenfabrik – Standortrechner & Programmplanung
 
-Zwei eigenständige Tools für die Standorte **Wien** und **Graz**:
+Alle drei Tools in einer einzigen, offline-fähigen HTML-Datei:
 
-## 1. Standortrechner
-
-Zwei Kalkulations-Apps (Wien & Graz). Jede ist eine einzelne HTML-Datei – kein Server, keine Abhängigkeiten, kein Build.
-Im Browser öffnen (Doppelklick), läuft offline.
-
-```
-zeichenfabrik-rechner/
-├── Zeichenfabrik_Wien_Standortrechner.html
-├── Zeichenfabrik_Graz_Standortrechner.html
-└── README.md
-
-zeichenfabrik-planung/
-└── Zeichenfabrik_Wien_Programmplanung.html
+**`Zeichenfabrik-All-in-One-Single.html`** — im Browser öffnen (Doppelklick), kein Server, keine Abhängigkeiten.
 
 ---
 
-## All-in-One App
+## Enthaltene Tools
 
-Für bequemes Umschalten zwischen allen Tools gibt es **zwei kombinierte Dateien**:
+### Wien Standortrechner
+Jahresplanung für den etablierten Standort Wien. Schichten: Wochenkurse, Wochenend-Workshops, Ferienworkshops, Teamevents (B2B), sonstige Umsätze. Ergebnis vor und nach Miete; Hebel-Analyse zeigt, wie stark eine kleine Änderung (+1 Ø-TN, +5 % Realisierung …) aufs Jahresergebnis wirkt.
 
-### 1. All-in-One mit IFrames (ursprünglich)
-- **Datei:** `Zeichenfabrik-All-in-One.html`
-- **Funktionen:**
-  - Tab-Navigation zum Umschalten zwischen den drei Tools
-  - Gemeinsames Design (Hell/Dunkel-Modus)
-  - Lädt die einzelnen Apps als IFrames
-- **Voraussetzung:** Die drei HTML-Dateien müssen im gleichen Ordner liegen
-- **Hinweis:** Fußzeilen waren in IFrames nicht sichtbar (behoben in Single-File-Version)
+### Graz Standortrechner
+Aufbau-Standort mit zusätzlicher Schicht *Nachmittag (Walk-in-Eventbetrieb)* und einer **Mehrjahres-Projektion (J1 → J3)** mit Anlaufkurve und Mietstaffel. Break-even-Miete als zentrales Verhandlungsthema.
 
-### 2. Single-File-App (neu, empfohlen) ⭐
-- **Datei:** `Zeichenfabrik-All-in-One-Single.html`
-- **Version:** v1.0 (2026-06-24)
-- **Funktionen:**
-  - **Native Integration** – Alle drei Tools direkt in einer Datei, **ohne IFrames**
-  - Tab-Navigation zum Umschalten zwischen den Tools
-  - Gemeinsames Design (Hell/Dunkel-Modus)
-  - **Sticky Fußzeilen** für jede App (nur für aktiven Tab sichtbar)
-  - **JSON Export/Import** für alle drei Tools
-  - **Verbesserte Kopieren-Funktion** mit Uhrzeit-Berechnung (z. B. "18:00-21:00")
-  - **Offline-fähig** – Funktioniert mit `file://` Protokoll
-- **Vorteile:**
-  - Keine externen Abhängigkeiten
-  - Keine IFrame-Probleme (Fußzeilen sichtbar)
-  - Einfacher zu verteilen (nur eine Datei)
-  - Schnellere Ladezeit (kein IFrame-Overhead)
-- **Technische Details:**
-  - Alle IDs mit Präfixen: `wien_`, `graz_`, `programm_`
-  - JavaScript-Logik in IIFEs gekapselt
-  - Gemeinsame Helferfunktionen: `g()`, `num()`, `eur()`, `pct()`
-  - Getrennte localStorage-Schlüssel für Szenarien
-
-**Empfehlung:** Verwenden Sie die Single-File-Version (`Zeichenfabrik-All-in-One-Single.html`), da sie alle Funktionen ohne Einschränkungen bietet.
-
----
-
-## 2. Programmplanung (Wien)
-
-Ein **Stundenplan-Entwurfstool** für den Standort Wien. Ermöglicht das Erstellen und Prüfen von Kurs- und Workshop-Plänen **vor** der CMS-Eintragung.
-
-- **Datei:** `Zeichenfabrik_Wien_Programmplanung.html`
-- **Zweck:** Stundenplan-Entwurf · Soll-Ist-Abgleich zum Plansoll · feiertags- und ferienbewusst
-- **Läuft offline** (einzelne HTML-Datei, keine Abhängigkeiten)
-
-### Funktionen
+### Wien Programmplanung
+Stundenplan-Entwurfstool vor der CMS-Eintragung.
 
 | Funktion | Beschreibung |
 |----------|--------------|
 | **Planjahr** | Wählbares Kalenderjahr (Default: 2026) für Soll-Ist-Berechnung |
-| **Wochenkurse** | Wöchentliche Kurse mit automatischer Feiertags-/Ferien-Aussetzung (verschieben sich nach hinten) |
+| **Wochenkurse** | Wöchentliche Kurse mit automatischer Feiertags-/Ferien-Aussetzung |
 | **Workshops** | Mehrtägige Blocktermine (von Sperrzeiten ausgenommen) |
-| **Sperrzeiten** | Editierbare Ferien/Schließzeiten (Wien vorbefüllt) |
-| **Eingetragen-Status** | Häkchen pro Kurs/Workshop, um den Live-Betrieb zu tracken |
-| **Soll-Ist-Abgleich** | Jahresgenaue Berechnung: Nur Termine/Tage im Planjahr zählen |
-| **Konfliktprüfung** | Prüft Raum- und Dozenten-Doppelbelegungen auf Datumsebene |
-| **Kopieren** | Kopiert Kurs-/Workshop-Details als Textblock in die Zwischenablage |
-| **JSON Export/Import** | Sichert den Plan als Datei (z. B. `zf-programm-2026.json`) |
-| **Szenarien** | Speichern/Laden von Plänen im Browser (localStorage) |
-
-### Bedienung
-
-1. **Plansoll** eintragen (aus dem Standortrechner)
-2. **Sperrzeiten** anpassen (falls nötig)
-3. **Kurse/Workshops** hinzufügen (über „+ Kurs hinzufügen“ / „+ Workshop hinzufügen“)
-4. **Detailformular** nutzen, um Einträge zu bearbeiten
-5. **Soll-Ist** prüfen (automatisch aktualisiert)
-6. **Konflikte** auflösen (falls vorhanden)
-7. **Exportieren** (JSON) für Datensicherheit
-
-### Technische Hinweise
-
-- **Feiertage:** Automatisch berechnet (Oster-Algorithmus für Österreich)
-- **Ferien:** Voreingestellt für Wien (Schuljahre 2025/26 & 2026/27), frei editierbar
-- **Workshops:** Bleiben von Sperrzeiten ausgenommen (feste Blocktermine)
-- **Jahresgenaue Soll-Ist:** Nur Termine/Tage im gewählten Planjahr werden gezählt
-- **Konfliktprüfung:** Prüft alle Kurs-Sitzungen und Workshop-Tage auf Überlappungen (Raum/Dozent)
-
-### Datenfluss & Speicherung
-
-- **localStorage:** Szenarien werden lokal im Browser gespeichert (`zf_wien_programm_v1`)
-- **JSON Export:** Erstellt eine Datei (z. B. `zf-programm-2026.json`) für Datensicherheit
-- **JSON Import:** Lädt eine vorher exportierte Datei und ersetzt den aktuellen Zustand
+| **Sperrzeiten** | Editierbare Ferien/Schließzeiten (Wien vorbefüllt), ein-/ausklappbar |
+| **Eingetragen-Status** | Häkchen pro Kurs/Workshop zur Überführung in den Live-Betrieb |
+| **Soll-Ist-Abgleich** | Jahresgenau: nur Termine/Tage im Planjahr zählen |
+| **Konfliktprüfung** | Raum- und Dozenten-Doppelbelegungen auf Datumsebene |
+| **Kopieren** | Kurs-/Workshop-Details als Textblock in die Zwischenablage |
+| **JSON Export/Import** | Plan als Datei sichern/laden (`zf-programm-<Planjahr>.json`) |
+| **Szenarien** | Pläne im Browser speichern/laden (localStorage) |
 
 ---
 
-## Standortrechner – Grundkonvention
-
-**Alle Werte sind netto** (USt 20 % herausgerechnet). Es gibt bewusst keine
-Brutto-Eingabefelder, um Missverständnisse zu vermeiden. Kurspreis 15 €/Std/TN
-netto entspricht dem gewohnten Bruttopreis – die Umrechnung passiert nicht in
-der App, sondern bleibt außerhalb.
-
 ## Ausführen & Szenarien
 
-Datei im Browser öffnen. Werte über Regler und Felder ändern – alles rechnet
-live. Über die Leiste oben lassen sich benannte **Szenarien speichern, laden und
-löschen** (lokal im Browser, `localStorage`). Die Apps nutzen getrennte Speicher-
-schlüssel (`zf_wien_scenarios_v1`, `zf_graz_scenarios_v1`), kollidieren also nicht.
-„Zurücksetzen" stellt die Startwerte wieder her.
+Datei im Browser öffnen. Werte über Regler und Felder ändern — alles rechnet live. Über die Leiste oben lassen sich benannte **Szenarien speichern, laden und löschen** (lokal im Browser, `localStorage`). Die drei Tools nutzen getrennte Schlüssel (`zf_wien_scenarios_v1`, `zf_graz_scenarios_v1`, `zf_wien_programm_v1`), kollidieren also nicht. „Zurücksetzen" stellt die Startwerte wieder her.
 
-## Das Modell (beide Apps gemeinsam)
+---
+
+## Das Modell (Standortrechner)
 
 Nettobeträge, Jahreswerte. Pro Schicht:
 
@@ -142,113 +59,65 @@ Standortweit:
                     − Werbung/Verwaltung − Betriebskosten − Miete − …
 ```
 
-## Unterschiede Wien vs. Graz
+**Alle Werte sind netto** (USt 20 % herausgerechnet).
 
-**Graz** ist ein Aufbau-Standort: enthält die Schicht *Nachmittag (Walk-in-Event-
-betrieb)* und eine **Mehrjahres-Projektion (J1→J3)** mit Anlaufkurve und Miet-
-staffel; die Break-even-Miete steht im Fokus (umsatzbasierte Miete als Verhand-
-lungsthema).
+---
 
-**Wien** ist ein etablierter Standort ohne Pilotjahr. Statt der Mehrjahres-
-Projektion gibt es eine **Hebel-Analyse**, die zeigt, wie stark eine einzelne
-kleine Änderung (z. B. +1 Ø-TN, +1 Kurs/Abend) aufs Jahresergebnis wirkt. Die
-Miete ist ein frei einstellbarer Transfer (Eigentümer = Privatperson), daher wird
-das **Ergebnis vor und nach Miete** ausgewiesen, plus ein Feld für
-*Unternehmerlohn/Entnahme* und eine *DB-Quoten*-Anzeige als Gesundheitskennzahl.
+## Code-Struktur (Single-File)
 
-## Code-Struktur
+Eine Datei, drei IIFE-Blöcke (je Tool), ein gemeinsamer `<style>`-Block und eine gemeinsame Tab-Navigation.
 
-Jede Datei hat drei Teile: `<style>` (Design-Tokens als CSS-Variablen, Hell/Dunkel
-automatisch), `<body>` (eine Card je Schicht + Standort-/Ergebnis-Block) und ein
-`<script>` (ein gekapseltes IIFE).
-
-Zentrale Stellen:
-
-- **`PERSIST_IDS`** – Array aller Eingabe-IDs. Steuert drei Dinge zugleich: Live-
-  Update (Event-Listener), Szenarien (speichern/laden) und Zurücksetzen. Jedes neue
-  Eingabefeld muss hier eingetragen werden.
-- **Graz:** `calc()` rendert das Einzeljahr und ruft am Ende `updateProjection()`
-  auf. Die Projektion nutzt die Helfer `pCourse / pAfter / pTeam / projYear`, die
-  je Jahr eigene Auslastung, Fixum und Miete anwenden; Struktur und Preise kommen
-  aus den Karten.
-- **Wien:** `computeAll(overrides)` ist die einzige Rechenfunktion. `render()`
-  zeigt sie an. Die Hebel-Analyse ruft `computeAll` mehrfach mit kleinen
-  `overrides` auf und bildet die Differenz – sauber erweiterbar um weitere Hebel.
+- **Element-IDs** mit Präfixen: `wien_`, `graz_`, `programm_` — verhindert Kollisionen.
+- **`PERSIST_IDS`** pro IIFE — steuert Live-Update (Event-Listener), Szenarien (speichern/laden) und Zurücksetzen. Jedes neue Eingabefeld muss dort eingetragen werden.
+- **Wien:** `computeAll(overrides)` ist die einzige Rechenfunktion. `render()` zeigt sie an. Die Hebel-Analyse ruft `computeAll` mehrfach mit kleinen `overrides` auf — sauber erweiterbar um weitere Hebel.
+- **Graz:** `calc()` rendert das Einzeljahr und ruft `updateProjection()` auf. Die Projektion nutzt `pCourse / pAfter / pTeam / projYear` mit je eigenem Auslastungs-/Fixum-/Miet-Override.
+- **Programmplanung:** IIFE mit globalem `state`-Objekt (kurse, workshops, sperr, planjahr, sollWk, sollWs). `renderAll()` → `renderKurse()`, `renderWs()`, `renderSperr()`, `recompute()`.
 
 ## Erweitern
 
-**Neue Schicht hinzufügen** (z. B. ein weiteres Standbein):
-1. Eine bestehende Schicht-Card im `<body>` kopieren, eindeutige IDs vergeben.
-2. In der Rechenfunktion (`calc()`/`computeAll()`) die Schicht analog ergänzen und
-   ihren Deckungsbeitrag in `sumDB` sowie ihren Umsatz in `totalNet` aufnehmen.
+**Neue Schicht (z. B. weiteres Standbein):**
+1. Bestehende Schicht-Card im `<body>` kopieren, eindeutige IDs mit Präfix vergeben.
+2. In der Rechenfunktion (`calc()`/`computeAll()`) die Schicht ergänzen.
 3. Die neuen IDs in `PERSIST_IDS` eintragen.
 
-**Wien um eine Mehrjahres-Projektion erweitern:** Das Muster aus der Graz-Datei
-übernehmen. `computeAll` akzeptiert bereits `overrides` – eine Jahresschleife, die
-je Jahr `wkR/weR/feR` (Auslastung), `fx` (Fixum) und `miete` überschreibt, genügt.
+**Wien: Mehrjahres-Projektion** — Das Muster aus der Graz-IIFE übernehmen. `computeAll` akzeptiert bereits `overrides` — eine Jahresschleife, die je Jahr `wien_wkR/weR/feR`, `wien_fx` und `wien_miete` überschreibt, genügt.
 
-**Graz: Werbung/Betriebskosten über die Jahre variabel machen** – derzeit konstant.
-In `projYear` statt `num('wv')` / `num('betrieb')` je Jahr eigene Felder lesen.
+**Standortleitung ins echte Leitungsmodell heben** (beide Rechner): Fixum erhöhen (KV-Einstufung) und Beteiligung% auf 8 setzen — am besten als zwei Szenarien gespeichert („Ist heute" / „Leitung neu").
 
-**Standortleitung ins echte Leitungsmodell heben** (beide Apps): Fixum erhöhen
-(KV-Einstufung) und Beteiligung% auf 8 setzen. In Wien lässt sich so in einem
-Schritt vom heutigen geringfügigen Stand auf das künftige Modell umstellen –
-am besten als zwei gespeicherte Szenarien („Ist heute" / „Leitung neu").
+---
 
 ## Versionshistorie
 
-### Single-File-App (v1.0) – 2026-06-24
-- **Neu:** `Zeichenfabrik-All-in-One-Single.html` – Alle drei Tools in einer Datei
-- Native Integration ohne IFrames
-- Tab-Navigation zum Umschalten zwischen Wien Standortrechner, Graz Standortrechner und Wien Programmplanung
-- Alle IDs mit Präfixen (`wien_`, `graz_`, `programm_`) zur Vermeidung von Konflikten
-- JavaScript-Logik in IIFEs gekapselt
-- Gemeinsame Helferfunktionen: `g()`, `num()`, `eur()`, `pct()`
-- Sticky Fußzeilen für jede App (nur für aktiven Tab sichtbar)
-- JSON Export/Import für alle drei Tools
-- Verbesserte Kopieren-Funktion mit Uhrzeit-Berechnung (z. B. "18:00-21:00")
+### Single-File-App (v1.1) – 2026-06-24
+- Bugfix: Python f-string-Artefakte (`{{`/`}}`) aus Programmplanung-IIFE entfernt (Syntax-Fehler)
+- Bugfix: alle `PERSIST_IDS` und `course()`/`courseLayer()`-Argumente auf `wien_`/`graz_`-Präfixe umgestellt
+- Bugfix: `updateProjection()` auf `graz_`-präfixierte Element-IDs umgestellt
+- Bugfix: Sortier-Selektoren auf `#programm_kursTable`/`#programm_wsTable` korrigiert
+- Bugfix: `programm_toggleCard` und `initCollapsibleCards` auf `programm_sperrCard` korrigiert
+- Bugfix: `copyToClipboard` Race-Condition (doppelter Fallback) behoben
+- Bugfix: dreifach falsche localStorage-Schlüssel korrigiert (`zf_wien_scenarios_v1` etc.)
 
-### All-in-One mit IFrames (v0.2) – 2026-06-24
-- **Neu:** `Zeichenfabrik-All-in-One.html` – Kombinierte Datei mit Tab-Navigation
-- Lädt die drei einzelnen Apps als IFrames
-- Gemeinsames Design (Hell/Dunkel-Modus)
-- Fußzeilen-Höhe angepasst, damit sie in IFrames sichtbar sind
-- Erfordert alle drei HTML-Dateien im gleichen Ordner
+### Single-File-App (v1.0) – 2026-06-24
+- Alle drei Tools nativ in einer Datei (ohne IFrames)
+- Tab-Navigation, sticky Fußzeilen, JSON Export/Import, Szenarien
 
 ### Programmplanung Wien (v1.0) – 2026-06-23
-- **Block 10:** Dokumentation in README.md
-- **Block 9:** JSON Export/Import für Datensicherheit
-- **Block 8:** Konfliktprüfung auf Datumsebene (Raum/Dozent)
-- **Block 7:** "Kopieren"-Button für Kurse und Workshops
-- **Block 6:** Plansoll mit Planjahr + jahresgenaue Soll-Ist-Berechnung
-- **Block 5:** Sperrzeiten ein-/ausklappbar
-- **Block 4:** Schlanke, sortierbare Liste + Detail-Edit-Formulare
-- **Block 3:** "Eingetragen"-Status für Kurse/Workshops
-- **Block 2:** Workshops mehrtägig mit dynamischer Stundenberechnung
-- **Block 1:** Datenmodell mit Planjahr, Eingetragen-Status, Workshop-Struktur
+- Mehrtägige Workshops, Eingetragen-Status, sortierbare Listen, Sperrzeiten ein-/ausklappbar
+- Jahresgenaue Soll-Ist-Berechnung, Konfliktprüfung, Kopieren-Button, JSON Export/Import
 
 ### Standortrechner Wien & Graz (v1.0) – 2026-06-23
-- Ursprüngliche Versionen mit Szenarien-Verwaltung (localStorage)
 - Wien: Hebel-Analyse, Ergebnis vor/nach Miete, DB-Quoten
 - Graz: Mehrjahres-Projektion (J1→J3), Break-even-Miete
-- Gemeinsames Modell: Nettobeträge, Jahreswerte, Deckungsbeitragsrechnung
+- Szenarien-Verwaltung (localStorage), JSON Export/Import
 
 ---
 
 ## Arbeiten mit Claude Code
 
-Diesen Ordner in Claude Code öffnen und in natürlicher Sprache an den Dateien
-arbeiten lassen („ergänze im Wien-Rechner die Teamevents-Sensitivität", „bau die
-Mehrjahres-Projektion ein"). Claude Code ändert die Datei direkt, zeigt das Diff,
-und du bestätigst.
-
-Empfehlenswert: den Ordner unter Versionsverwaltung stellen, damit jeder Stand
-nachvollziehbar bleibt.
+Diesen Ordner in Claude Code öffnen und in natürlicher Sprache Änderungen beschreiben — Claude Code ändert die Datei direkt. Danach committen:
 
 ```
-git init
-git add .
-git commit -m "Standortrechner Wien & Graz, Ausgangsstand"
+git add Zeichenfabrik-All-in-One-Single.html
+git commit -m "…"
+git push
 ```
-
-Danach genügt nach jeder Änderung ein `git add -A && git commit -m "…"`.
