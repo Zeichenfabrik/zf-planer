@@ -694,6 +694,7 @@
   <button id="programm_btnExport">JSON Export</button>
   <button id="programm_btnImport">JSON Import</button>
   <button id="programm_btnReset">Zurücksetzen</button>
+  <span id="programm_saved" style="font-size:11.5px; color:var(--faint); margin-left:6px;"></span>
 </div>
 
 <!-- PLANSOLL -->
@@ -1503,10 +1504,10 @@ function programm_initCollapsibleCards() {
   }
 
   // ---- State ------------------------------------------------------------
+  // Datenmodell: planjahr + globale Sperrzeiten + pro Jahr Soll/Kurse/Workshops
   function freshState(){
     return {
       planjahr: 2027,
-      sollWk:1000, sollWs:532,
       sperr:[
         {id:uid(),name:'Semesterferien 2026', von:'2026-01-31', bis:'2026-02-08'},
         {id:uid(),name:'Osterferien 2026',    von:'2026-03-28', bis:'2026-04-06'},
@@ -1519,15 +1520,73 @@ function programm_initCollapsibleCards() {
         {id:uid(),name:'Pfingstferien 2027',  von:'2027-05-15', bis:'2027-05-17'},
         {id:uid(),name:'Sommerferien 2027',   von:'2027-07-03', bis:'2027-09-05'}
       ],
-      kurse:[
-        {id:uid(),titel:'Aktzeichnen Grundkurs', dozent:'', tag:3, zeit:'18:00', start:'2027-03-03', sessions:7, std:3, raum:'1', inFerien:false, eingetragen:false}
-      ],
-      workshops:[
-        {id:uid(),titel:'Wochenend-Workshop Aquarell', dozent:'', start:'2027-04-17', tage:1, zeiten:[{von:'10:00', bis:'17:00'}], raum:'2', eingetragen:false}
-      ]
+      jahre:{
+        '2027':{
+          sollWk:1000, sollWs:532,
+          kurse:[
+            {id:uid(),titel:'Aktzeichnen Grundkurs', dozent:'', tag:3, zeit:'18:00', start:'2027-03-03', sessions:7, std:3, raum:'1', inFerien:false, eingetragen:false}
+          ],
+          workshops:[
+            {id:uid(),titel:'Wochenend-Workshop Aquarell', dozent:'', start:'2027-04-17', tage:1, zeiten:[{von:'10:00', bis:'17:00'}], raum:'2', eingetragen:false}
+          ]
+        }
+      }
     };
   }
-  var state=freshState();
+
+  // Legt ein leeres Jahr an, falls es fehlt, und stellt die vollständige Form sicher
+  function ensureYear(y){
+    y=String(y);
+    if(!state.jahre) state.jahre={};
+    var j=state.jahre[y];
+    if(!j){ j=state.jahre[y]={sollWk:1000, sollWs:532, kurse:[], workshops:[]}; }
+    if(j.sollWk==null) j.sollWk=1000;
+    if(j.sollWs==null) j.sollWs=532;
+    if(!Array.isArray(j.kurse)) j.kurse=[];
+    if(!Array.isArray(j.workshops)) j.workshops=[];
+    return j;
+  }
+  // Aktuelles Planjahr-Objekt
+  function cur(){ return ensureYear(state.planjahr); }
+
+  // Beliebiges State-Objekt (alt-flach oder neu) auf die Jahres-Struktur normalisieren
+  function normalize(s){
+    if(!s || typeof s!=='object') return freshState();
+    if(s.jahre){
+      if(!Array.isArray(s.sperr)) s.sperr=[];
+      if(!s.planjahr) s.planjahr=2027;
+      return s;
+    }
+    // altes flaches Format → in jahre[planjahr] einbetten
+    var y=s.planjahr||2027;
+    var ns={ planjahr:y, sperr:Array.isArray(s.sperr)?s.sperr:[], jahre:{} };
+    ns.jahre[String(y)]={
+      sollWk: s.sollWk!=null?s.sollWk:1000,
+      sollWs: s.sollWs!=null?s.sollWs:532,
+      kurse: s.kurse||[],
+      workshops: s.workshops||[]
+    };
+    return ns;
+  }
+
+  var PERSIST_KEY='zf_programm_v2';
+  var OLD_KEY='zf_wien_programm_v1';
+  function persist(){
+    try{
+      localStorage.setItem(PERSIST_KEY, JSON.stringify(state));
+      var el=g('programm_saved');
+      if(el){ var n=new Date(); el.textContent='zuletzt gesichert '+pad(n.getHours())+':'+pad(n.getMinutes()); }
+    }catch(e){}
+  }
+  function loadState(){
+    // 1) neues Auto-Speichern
+    try{ var raw=localStorage.getItem(PERSIST_KEY); if(raw){ var s=JSON.parse(raw); if(s) return normalize(s); } }catch(e){}
+    // 2) Migration: altes flaches Arbeits-State (falls je vorhanden)
+    try{ var old=localStorage.getItem(OLD_KEY); if(old){ var o=JSON.parse(old); if(o && (o.kurse||o.workshops||o.sperr)) return normalize(o); } }catch(e){}
+    // 3) Startwerte
+    return freshState();
+  }
+  var state=loadState();
   var currentEditKurs = null;
   var currentEditWs = null;
   var sortState = { kurs: { col: null, asc: true }, ws: { col: null, asc: true } };
@@ -1550,7 +1609,7 @@ function programm_initCollapsibleCards() {
 
   function renderKurse(){
     // Sortieren
-    var sorted = [...state.kurse];
+    var sorted = [...cur().kurse];
     if (sortState.kurs.col) {
       sorted.sort(function(a, b) {
         var valA = a[sortState.kurs.col] !== undefined ? a[sortState.kurs.col] : '';
@@ -1613,7 +1672,7 @@ function programm_initCollapsibleCards() {
 
   function renderWs(){
     // Sortieren
-    var sorted = [...state.workshops];
+    var sorted = [...cur().workshops];
     if (sortState.ws.col) {
       sorted.sort(function(a, b) {
         var valA = a[sortState.ws.col] !== undefined ? a[sortState.ws.col] : '';
@@ -1678,7 +1737,7 @@ function programm_initCollapsibleCards() {
   function renderFeiertage(){
     var years={}; 
     state.sperr.forEach(function(s){ var v=parseD(s.von); if(v) years[v.getFullYear()]=1; });
-    state.kurse.forEach(function(k){ var v=parseD(k.start); if(v){years[v.getFullYear()]=1; years[v.getFullYear()+1]=1;} });
+    cur().kurse.forEach(function(k){ var v=parseD(k.start); if(v){years[v.getFullYear()]=1; years[v.getFullYear()+1]=1;} });
     var ys=Object.keys(years).sort();
     if(!ys.length){ g('programm_feiertage').textContent=''; return; }
     var parts=['Automatisch gesperrte gesetzliche Feiertage:'];
@@ -1691,8 +1750,11 @@ function programm_initCollapsibleCards() {
 
   function distinct(field){
     var seen={}, vals=[];
-    (state.kurse||[]).concat(state.workshops||[]).forEach(function(r){
-      var v=r[field]; if(v && !seen[v]){seen[v]=1; vals.push(v);}
+    Object.keys(state.jahre||{}).forEach(function(y){
+      var j=state.jahre[y];
+      (j.kurse||[]).concat(j.workshops||[]).forEach(function(r){
+        var v=r[field]; if(v && !seen[v]){seen[v]=1; vals.push(v);}
+      });
     });
     return vals.sort();
   }
@@ -1760,10 +1822,10 @@ function programm_initCollapsibleCards() {
   }
   
   function saveKursDetail(id, isNew) {
-    var rec = state.kurse.filter(function(r){return r.id===id;})[0];
+    var rec = cur().kurse.filter(function(r){return r.id===id;})[0];
     if (!rec && isNew) {
       rec = {id:id, titel:'', dozent:'', tag:3, zeit:'18:00', start:'', sessions:7, std:3, raum:'', inFerien:false, eingetragen:false};
-      state.kurse.push(rec);
+      cur().kurse.push(rec);
     }
     if (rec) {
       rec.titel = g('programm_detKursTitel').value;
@@ -1780,8 +1842,10 @@ function programm_initCollapsibleCards() {
     g('programm_kursDetailForm').classList.remove('active');
     currentEditKurs = null;
     renderKurse();
+    updateDataLists();
     recompute();
     renderFeiertage();
+    persist();
   }
   
   function renderWsDetail(ws, isNew) {
@@ -1856,10 +1920,10 @@ function programm_initCollapsibleCards() {
   }
   
   function saveWsDetail(id, isNew) {
-    var rec = state.workshops.filter(function(r){return r.id===id;})[0];
+    var rec = cur().workshops.filter(function(r){return r.id===id;})[0];
     if (!rec && isNew) {
       rec = {id:id, titel:'', dozent:'', start:'', tage:1, zeiten:[], raum:'', eingetragen:false};
-      state.workshops.push(rec);
+      cur().workshops.push(rec);
     }
     if (rec) {
       rec.titel = g('programm_detWsTitel').value;
@@ -1882,7 +1946,9 @@ function programm_initCollapsibleCards() {
     g('programm_wsDetailForm').classList.remove('active');
     currentEditWs = null;
     renderWs();
+    updateDataLists();
     recompute();
+    persist();
   }
   
   // ---- Kopieren-Funktionen ----------------------------------------
@@ -1981,7 +2047,7 @@ function programm_initCollapsibleCards() {
   function recompute(){
     var sumWk=0;
     var sumWkYear=0;
-    state.kurse.forEach(function(k){
+    cur().kurse.forEach(function(k){
       var dates=genDates(k.start, +k.tag, +k.sessions, !!k.inFerien);
       var hrs=(+k.sessions)*(+k.std);
       sumWk+=hrs;
@@ -1997,7 +2063,7 @@ function programm_initCollapsibleCards() {
     
     var sumWs=0;
     var sumWsYear=0;
-    state.workshops.forEach(function(w){
+    cur().workshops.forEach(function(w){
       var totalHours = getWorkshopTotalHours(w);
       sumWs += totalHours;
       
@@ -2017,16 +2083,16 @@ function programm_initCollapsibleCards() {
       sumWsYear += yearHrs;
     });
 
-    var dWk=sumWkYear-(+state.sollWk), dWs=sumWsYear-(+state.sollWs);
+    var dWk=sumWkYear-(+cur().sollWk), dWs=sumWsYear-(+cur().sollWs);
     g('programm_abgleichJahr').textContent = state.planjahr;
     g('programm_abgleich').innerHTML=
-      row('Wochenkurse', sumWkYear, state.sollWk, dWk)+
-      row('Workshops', sumWsYear, state.sollWs, dWs);
+      row('Wochenkurse', sumWkYear, cur().sollWk, dWk)+
+      row('Workshops', sumWsYear, cur().sollWs, dWs);
 
     // Konfliktprüfung
     var slots = [];
-    
-    state.kurse.forEach(function(k) {
+
+    cur().kurse.forEach(function(k) {
       var dates = genDates(k.start, +k.tag, +k.sessions, !!k.inFerien);
       var vonMin = toMin(k.zeit);
       var bisMin = vonMin + (+k.std) * 60;
@@ -2042,7 +2108,7 @@ function programm_initCollapsibleCards() {
       });
     });
     
-    state.workshops.forEach(function(w) {
+    cur().workshops.forEach(function(w) {
       var dates = getWorkshopDates(w);
       dates.forEach(function(d, i) {
         if (w.zeiten && w.zeiten[i]) {
@@ -2083,8 +2149,8 @@ function programm_initCollapsibleCards() {
       ? '<div class="konf">⚠ ' + konf.join('<br>⚠ ') + '</div>'
       : '<div class="ok">Keine Raum- oder Dozenten-Konflikte erkannt.</div>';
 
-    g('programm_b-wk').innerHTML=nf.format(sumWkYear)+' / '+nf.format(state.sollWk)+' h '+badge(dWk);
-    g('programm_b-ws').innerHTML=nf.format(sumWsYear)+' / '+nf.format(state.sollWs)+' h '+badge(dWs);
+    g('programm_b-wk').innerHTML=nf.format(sumWkYear)+' / '+nf.format(cur().sollWk)+' h '+badge(dWk);
+    g('programm_b-ws').innerHTML=nf.format(sumWsYear)+' / '+nf.format(cur().sollWs)+' h '+badge(dWs);
     g('programm_b-konf').innerHTML = konf.length? '<span class="neg">'+konf.length+'</span>' : '<span class="pos">0</span>';
   }
   function row(label, ist, soll, d){
@@ -2132,12 +2198,13 @@ function programm_initCollapsibleCards() {
   document.addEventListener('change', onEdit);
   function onEdit(e){
     var t=e.target;
-    if(t.id==='programm_planjahr'){ state.planjahr=+t.value||2027; recompute(); return; }
-    if(t.id==='programm_sollWk'){ state.sollWk=+t.value||0; recompute(); return; }
-    if(t.id==='programm_sollWs'){ state.sollWs=+t.value||0; recompute(); return; }
+    if(t.id==='programm_planjahr'){ changePlanjahr(+t.value||2027); return; }
+    if(t.id==='programm_sollWk'){ cur().sollWk=+t.value||0; recompute(); persist(); return; }
+    if(t.id==='programm_sollWs'){ cur().sollWs=+t.value||0; recompute(); persist(); return; }
     var tbl=t.getAttribute&&t.getAttribute('data-t'), id=t.getAttribute&&t.getAttribute('data-id'), f=t.getAttribute&&t.getAttribute('data-f');
     if(!tbl||!id||!f) return;
-    var rec=state[tbl].filter(function(r){return r.id===id;})[0]; if(!rec) return;
+    var coll = (tbl==='sperr') ? state.sperr : cur()[tbl];
+    var rec=coll.filter(function(r){return r.id===id;})[0]; if(!rec) return;
     
     if(f==='zeiten'){
       var idx=+t.getAttribute('data-idx');
@@ -2161,41 +2228,68 @@ function programm_initCollapsibleCards() {
     recompute();
     if(f==='von'||f==='bis'||f==='start') renderFeiertage();
     if(tbl==='workshops' && (f==='tage'||f==='start'||f==='zeiten')) renderWs();
+    if(f==='titel'||f==='dozent') updateDataLists();
+    persist();
   }
-  
+
+  // Planjahr wechseln: Jahr anlegen, optional Vorjahr als Vorlage kopieren, Soll neu befüllen
+  function changePlanjahr(ny){
+    var existed = !!(state.jahre && state.jahre[String(ny)]);
+    state.planjahr = ny;
+    ensureYear(ny);
+    if(!existed){
+      var src=null;
+      Object.keys(state.jahre).map(Number).filter(function(y){return y<ny;}).sort(function(a,b){return b-a;}).some(function(y){
+        var j=state.jahre[String(y)];
+        if((j.kurse&&j.kurse.length)||(j.workshops&&j.workshops.length)){ src=y; return true; }
+        return false;
+      });
+      if(src!=null && confirm('Kurse/Workshops aus '+src+' als Vorlage kopieren?')){
+        var s=state.jahre[String(src)], c=cur();
+        c.kurse=JSON.parse(JSON.stringify(s.kurse)).map(function(k){k.id=uid(); return k;});
+        c.workshops=JSON.parse(JSON.stringify(s.workshops)).map(function(w){w.id=uid(); return w;});
+        c.sollWk=s.sollWk; c.sollWs=s.sollWs;
+      }
+    }
+    g('programm_sollWk').value=cur().sollWk;
+    g('programm_sollWs').value=cur().sollWs;
+    renderAll();
+    persist();
+  }
+
   // Klick-Handler
   document.addEventListener('click', function(e){
-    var del=e.target.getAttribute&&e.target.getAttribute('data-del'); 
+    var del=e.target.getAttribute&&e.target.getAttribute('data-del');
     if(del){
       var id=e.target.getAttribute('data-id');
-      state[del]=state[del].filter(function(r){return r.id!==id;});
-      if(del==='sperr'){ renderSperr(); renderFeiertage(); recompute(); }
-      else if(del==='kurse'){ renderKurse(); recompute(); }
-      else { renderWs(); recompute(); }
+      if(del==='sperr'){ state.sperr=state.sperr.filter(function(r){return r.id!==id;}); renderSperr(); renderFeiertage(); recompute(); }
+      else if(del==='kurse'){ cur().kurse=cur().kurse.filter(function(r){return r.id!==id;}); renderKurse(); updateDataLists(); recompute(); }
+      else { cur().workshops=cur().workshops.filter(function(r){return r.id!==id;}); renderWs(); updateDataLists(); recompute(); }
+      persist();
       return;
     }
-    
+
     var edit=e.target.getAttribute&&e.target.getAttribute('data-edit');
     if(edit){
       var id=e.target.getAttribute('data-id');
       if(edit==='kurse'){
-        var kurs = state.kurse.filter(function(r){return r.id===id;})[0];
+        var kurs = cur().kurse.filter(function(r){return r.id===id;})[0];
         if(kurs) renderKursDetail(kurs, false);
       } else if(edit==='workshops'){
-        var ws = state.workshops.filter(function(r){return r.id===id;})[0];
+        var ws = cur().workshops.filter(function(r){return r.id===id;})[0];
         if(ws) renderWsDetail(ws, false);
       }
       return;
     }
-    
+
     var copy=e.target.getAttribute&&e.target.getAttribute('data-copy');
     if(copy){
       var id=e.target.getAttribute('data-id');
       if(copy==='kurse'){
-        var kurs = state.kurse.filter(function(r){return r.id===id;})[0];
+        var kurs = cur().kurse.filter(function(r){return r.id===id;})[0];
         if(kurs) copyToClipboardKurs(kurs);
       } else if(copy==='workshops'){
-        var ws = state.workshops.filter(function(r){return r.id===id;})[0];
+        var ws = cur().workshops.filter(function(r){return r.id===id;})[0];
         if(ws) copyToClipboardWs(ws);
       }
       return;
@@ -2229,12 +2323,13 @@ function programm_initCollapsibleCards() {
       reader.onload = function(e) {
         try {
           var data = JSON.parse(e.target.result);
-          if (data && data.kurse && data.workshops && data.sperr) {
-            state = data;
+          if (data && (data.jahre || data.kurse || data.workshops)) {
+            state = normalize(data);
             g('programm_planjahr').value = state.planjahr;
-            g('programm_sollWk').value = state.sollWk;
-            g('programm_sollWs').value = state.sollWs;
+            g('programm_sollWk').value = cur().sollWk;
+            g('programm_sollWs').value = cur().sollWs;
             renderAll();
+            persist();
             showNotification('Import erfolgreich ✓');
           } else {
             showNotification('Ungültige JSON-Datei');
@@ -2262,10 +2357,11 @@ function programm_initCollapsibleCards() {
   });
   g('programm_btnLoad').addEventListener('click', function(){
     var name=g('programm_scen').value; if(!name) return; var o=store(); if(!o[name]) return;
-    state=JSON.parse(JSON.stringify(o[name]));
+    state=normalize(JSON.parse(JSON.stringify(o[name])));
     g('programm_planjahr').value=state.planjahr;
-    g('programm_sollWk').value=state.sollWk; g('programm_sollWs').value=state.sollWs;
+    g('programm_sollWk').value=cur().sollWk; g('programm_sollWs').value=cur().sollWs;
     renderAll();
+    persist();
   });
   g('programm_btnDel').addEventListener('click', function(){
     var name=g('programm_scen').value; if(!name) return; if(!confirm('Szenario "'+name+'" löschen?')) return;
@@ -2273,24 +2369,25 @@ function programm_initCollapsibleCards() {
   });
   g('programm_btnReset').addEventListener('click', function(){
     if(!confirm('Auf Startwerte zurücksetzen? Nicht gespeicherte Eingaben gehen verloren.')) return;
-    state=freshState(); 
+    state=freshState();
     g('programm_planjahr').value=state.planjahr;
-    g('programm_sollWk').value=state.sollWk; 
-    g('programm_sollWs').value=state.sollWs; 
+    g('programm_sollWk').value=cur().sollWk;
+    g('programm_sollWs').value=cur().sollWs;
     renderAll();
+    persist();
   });
   
   g('programm_btnExport').addEventListener('click', exportJSON);
   g('programm_btnImport').addEventListener('click', importJSON);
   
   g('programm_planjahr').value = state.planjahr;
-  g('programm_sollWk').value = state.sollWk;
-  g('programm_sollWs').value = state.sollWs;
-  
+  g('programm_sollWk').value = cur().sollWk;
+  g('programm_sollWs').value = cur().sollWs;
+
   programm_initCollapsibleCards();
   setupSorting();
-  
-  g('programm_addSperr').addEventListener('click', function(){ state.sperr.push({id:uid(),name:'Neue Sperrzeit',von:'',bis:''}); renderSperr(); });
+
+  g('programm_addSperr').addEventListener('click', function(){ state.sperr.push({id:uid(),name:'Neue Sperrzeit',von:'',bis:''}); renderSperr(); persist(); });
   g('programm_addKurs').addEventListener('click', function() {
     var newKurs = {id:uid(),titel:'Neuer Kurs',dozent:'',tag:3,zeit:'18:00',start:'',sessions:7,std:3,raum:'',inFerien:false,eingetragen:false};
     renderKursDetail(newKurs, true);
